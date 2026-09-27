@@ -11,7 +11,7 @@
      ============================================================ -->
 <script>
 window.WH_FIREBASE_CONFIG = {
-apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
+  apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
   authDomain: "pac-warehouse.firebaseapp.com",
   projectId: "pac-warehouse",
   storageBucket: "pac-warehouse.firebasestorage.app",
@@ -64,6 +64,49 @@ apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
   .btn.ghost{background:none;border:1px solid var(--line);color:var(--ink);font-weight:500}
   .btn.danger{background:var(--red);color:#fff}
   .btn.small{margin:0;padding:6px 10px;font-size:13px}
+  table.cards .c-meta, table.cards .sm-only{display:none}
+  .offline{background:var(--red);color:#fff;padding:8px 16px;font-size:14px;text-align:center}
+  nav .more-btn{display:none}
+  .subnav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .subnav button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:7px 14px;font:inherit;font-size:14px;cursor:pointer}
+  .subnav button.active{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  .subhide{display:none !important}
+  .saved{font-size:13px;color:var(--accent);min-width:48px}
+  .danger-zone{margin-top:8px;text-align:right}
+  .btn.link-danger{background:none;border:0;color:var(--red);font-weight:500;padding:6px 0;margin:0;font-size:13px;text-decoration:underline}
+  .more-list{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .more-list button{padding:14px 10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;font:inherit;cursor:pointer;position:relative}
+  @media (max-width:640px){
+    header{padding:10px 12px}
+    header h1{font-size:15px}
+    .who{font-size:12px;gap:6px}
+    main{padding:12px}
+    .card{padding:14px}
+    nav{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:20;flex-wrap:nowrap;overflow:visible;gap:2px;
+        padding:6px 6px calc(6px + env(safe-area-inset-bottom, 0px));border-top:1px solid var(--line);border-bottom:0;box-shadow:0 -2px 10px rgba(0,0,0,.07)}
+    nav button{flex:1 1 0;min-width:0;padding:12px 1px;font-size:12px;letter-spacing:-.01em;text-align:center;white-space:nowrap}
+    nav .badge{position:absolute;top:1px;right:2px;margin:0}
+    .kpis{gap:10px 18px}
+    .kpis div b{font-size:18px}
+    .kpis div span{font-size:11px}
+    nav button.sec{display:none}
+    nav .more-btn{display:block}
+    nav .badge{min-width:16px;line-height:16px;font-size:10px;padding:0 4px}
+    body{padding-bottom:calc(72px + env(safe-area-inset-bottom, 0px))}
+    .btn.small{min-height:38px;padding:8px 12px}
+    form .btn:not(.small), .card > .btn:not(.small), #fFaulty .btn{width:100%}
+    table.cards thead{display:none}
+    table.cards tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;padding:11px 2px;border-bottom:1px solid var(--line)}
+    table.cards tr.low{background:var(--amber-soft)}
+    table.cards td{border:0;padding:0;background:none !important}
+    table.cards .hide-sm{display:none}
+    table.cards .c-title{font-weight:600;grid-column:1}
+    table.cards .c-side{grid-column:2;grid-row:1;text-align:right}
+    table.cards .c-full, table.cards .c-meta, table.cards td[colspan]{grid-column:1 / -1}
+    table.cards .c-meta{display:block;font-size:13px;color:var(--muted)}
+    table.cards .sm-only{display:block}
+    table.cards input:not([type=checkbox]){width:100% !important;max-width:none !important;text-align:left !important}
+  }
   table{width:100%;border-collapse:collapse;font-size:14px}
   th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
   th{color:var(--muted);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
@@ -170,13 +213,14 @@ apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
 
 <!-- ================= APP ================= -->
 <div id="app">
+<div id="offline" class="offline" hidden>No internet connection. Nothing you post will save until the connection is back.</div>
 <header>
   <h1>Prime Warehouse</h1>
   <div class="who"><span id="whoName"></span><span id="whoRole" class="pill p-gray"></span><button class="btn ghost small" onclick="auth.signOut()">Sign out</button></div>
 </header>
 <nav id="tabs">
   <button data-tab="stock" class="active">Stock</button>
-  <button data-tab="deliveries">Deliveries</button>
+  <button data-tab="deliveries">Deliveries<span class="badge" id="delBadge" hidden></span></button>
   <button data-tab="receive" data-roles="manager keeper">Receive</button>
   <button data-tab="issue" data-roles="manager keeper">Issue</button>
   <button data-tab="adjust" data-roles="manager keeper">Adjust</button>
@@ -187,6 +231,7 @@ apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
   <button data-tab="labels" data-roles="manager keeper">Labels</button>
   <button data-tab="approvals" class="mgr">Approvals<span class="badge" id="pendBadge" hidden></span></button>
   <button data-tab="setup">Setup</button>
+  <button class="more-btn" id="moreBtn" type="button">More<span class="badge" id="moreBadge" hidden></span></button>
 </nav>
 
 <main>
@@ -201,8 +246,8 @@ apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
       <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="stockLowOnly"> Low only</label>
       <button class="btn ghost small" onclick="exportStock()">Export CSV</button>
     </div>
-    <div class="scroll"><table>
-      <thead><tr><th>Code</th><th>Item</th><th class="num">On hand</th><th class="num">Reserved</th><th class="num">Available</th><th>Unit</th><th class="num">Reorder at</th><th class="num mgrc">Avg cost</th><th class="num mgrc">Value</th></tr></thead>
+    <div class="scroll"><table class="cards">
+      <thead><tr><th>Code</th><th>Item</th><th class="num">On hand</th><th class="num">Reserved</th><th class="num">Available</th><th>Unit</th><th class="num">Reorder at</th></tr></thead>
       <tbody id="stockBody"></tbody>
     </table></div>
     <p class="hint">Click an item to see which warehouse has it. Reserved = still to be issued to open projects, plus stock held for deliveries waiting to be loaded. Available = on hand (outside the faulty area) minus reserved.</p>
@@ -214,11 +259,13 @@ apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
   <div id="delList">
     <div class="card">
       <div class="toolbar"><h2 style="margin:0;flex:1">Deliveries</h2><button class="btn small" id="newDelBtn" data-roles="manager dispatcher">New delivery</button></div>
+      <div class="scanbox"><span>▦</span><input class="scan" id="plScan" aria-label="Scan packing list" placeholder="Scan a packing list barcode or type the PL number, then Enter" autocomplete="off"></div>
+      <div class="msg" id="plScanMsg"></div>
       <div class="toolbar">
         <select id="delFilter"><option value="open">Open</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="all">All</option></select>
         <select id="delVehicle"></select><select id="delDriver"></select>
       </div>
-      <div class="scroll"><table><thead><tr><th>PL</th><th>Date</th><th>Destination</th><th>Truck</th><th>Driver</th><th class="num">Lines</th><th>Status</th></tr></thead><tbody id="delBody"></tbody></table></div>
+      <div class="scroll"><table class="cards"><thead><tr><th>PL</th><th>Date</th><th>Destination</th><th>Truck</th><th>Driver</th><th class="num">Lines</th><th>Status</th></tr></thead><tbody id="delBody"></tbody></table></div>
       <p class="muted" id="delNote"></p>
     </div>
   </div>
@@ -280,7 +327,7 @@ apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
     <div class="card">
       <div class="toolbar"><h2 style="margin:0;flex:1">Projects</h2>
         <select id="projFilter"><option value="open">Planned &amp; active</option><option value="">All</option><option value="closed">Closed</option></select></div>
-      <div class="scroll"><table><thead><tr><th>Code</th><th>Project</th><th>Client</th><th>Status</th><th class="num">Lines</th><th class="num">Issued</th><th class="num">Short now</th><th class="num mgrc">Material cost</th></tr></thead><tbody id="projBody"></tbody></table></div>
+      <div class="scroll"><table class="cards"><thead><tr><th>Code</th><th>Project</th><th>Client</th><th>Status</th><th class="num">Lines</th><th class="num">Issued</th><th class="num">Short now</th></tr></thead><tbody id="projBody"></tbody></table></div>
     </div>
   </div>
   <div id="projDetail" hidden></div>
@@ -326,7 +373,7 @@ apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
       <button class="btn ghost small" onclick="exportHistory()">Export CSV</button>
     </div>
     <div class="scroll"><table>
-      <thead><tr><th>Date</th><th>Type</th><th>Item</th><th>Location</th><th class="num">Qty</th><th>Reason / reference</th><th>By</th><th class="num mgrc">Unit cost</th></tr></thead>
+      <thead><tr><th>Date</th><th>Type</th><th>Item</th><th>Location</th><th class="num">Qty</th><th>Reason / reference</th><th>By</th></tr></thead>
       <tbody id="hBody"></tbody>
     </table></div>
     <p class="muted" id="hNote"></p>
@@ -365,7 +412,8 @@ apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
 
 <!-- SETUP -->
 <section class="tab" id="setup">
-  <div class="card" data-roles="manager keeper">
+  <div class="subnav" id="setupSub" role="tablist" aria-label="Setup sections"></div>
+  <div class="card" data-roles="manager keeper" data-sub="items">
     <h2>Add item</h2>
     <form id="fItem">
       <div class="row3">
@@ -383,11 +431,11 @@ apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
       <div class="msg" id="itemMsg"></div>
     </form>
   </div>
-  <div class="card" data-roles="manager keeper">
+  <div class="card" data-roles="manager keeper" data-sub="items">
     <div class="toolbar"><h2 style="margin:0;flex:1">Items</h2><input id="itemSearch" placeholder="Search"></div>
-    <div class="scroll"><table><thead><tr><th>Code</th><th>Name</th><th>Unit</th><th>Category</th><th>Serials</th><th class="num">Reorder</th><th class="num mgrc">Avg cost</th><th class="mgr"></th></tr></thead><tbody id="itemBody"></tbody></table></div>
+    <div class="scroll"><table><thead><tr><th>Code</th><th>Name</th><th>Unit</th><th>Category</th><th>Serials</th><th class="num">Reorder</th><th class="mgr"></th></tr></thead><tbody id="itemBody"></tbody></table></div>
   </div>
-  <div class="card" data-roles="manager dispatcher">
+  <div class="card" data-roles="manager dispatcher" data-sub="fleet">
     <h2>Fleet</h2>
     <form id="fVeh" class="toolbar"><input id="vehName" required placeholder="Plate or name, e.g. ABC-1234">
       <select id="vehType"><option>Boom Truck</option><option>Wing Van</option><option>Van</option><option>Forward</option><option>Pickup</option><option>SUV</option><option>Dump Truck</option></select>
@@ -399,13 +447,13 @@ apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
       <button class="btn small">Add person</button></form>
     <div class="scroll"><table><thead><tr><th>Name</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody id="crewBody"></tbody></table></div>
   </div>
-  <div class="card mgr">
+  <div class="card mgr" data-sub="locations">
     <h2>Locations</h2>
     <form id="fLoc" class="toolbar"><input id="locName" required placeholder="New location, e.g. Service Van 1"><button class="btn small">Add location</button></form>
     <div class="scroll"><table><thead><tr><th>Location</th><th>Type</th><th class="num">Items stocked here</th><th></th></tr></thead><tbody id="locBody"></tbody></table></div>
     <p class="hint">A location can be removed once it holds no stock. Move stock out with Transfer first. The Faulty / Warranty area can be renamed but not removed.</p>
   </div>
-  <div class="card mgr">
+  <div class="card mgr" data-sub="users">
     <h2>Users</h2>
     <form id="fUser">
       <div class="row">
@@ -422,7 +470,7 @@ apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
     <div class="scroll" style="margin-top:12px"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody id="userBody"></tbody></table></div>
     <p class="hint">Forgotten password: turn the old account off and create a new one. Passwords can't be read or reset from here.</p>
   </div>
-  <div class="card mgr">
+  <div class="card mgr" data-sub="import">
     <h2>Import from Basic Warehouse</h2>
     <p class="muted" style="margin-top:0">Bring over items and current stock from a backup file of the earlier single-computer app. Stock comes in as "Opening balance". Items that already exist here are skipped.</p>
     <input type="file" id="importFile" accept=".json">
@@ -444,7 +492,6 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt = n => Number((+n||0).toFixed(3)).toLocaleString('en-PH');
-const peso = n => '₱' + (+n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
 const FV = () => firebase.firestore.FieldValue;
 const serialId = (code, s) => code + '__' + String(s).replace(/[^A-Za-z0-9._-]/g,'_');
 const stockId = (code, loc) => code + '__' + loc;
@@ -467,7 +514,7 @@ const REASONS = {
   RECEIVED:     {type:'IN',  kind:'receive', label:'Received from supplier', from:[null,'closed'], to:'in_stock', cost:true},
   RETURN_SITE:  {type:'IN',  kind:'receive', label:'Returned from site (unused)', from:['issued'], to:'in_stock', project:'return'},
   REPAIRED:     {type:'IN',  kind:'receive', label:'Back from supplier (repaired)', from:['at_supplier'], to:'in_stock', serialOnly:true},
-  WARRANTY_REPL:{type:'IN',  kind:'receive', label:'Warranty replacement (no cost)', from:[null,'closed'], to:'in_stock', zeroCost:true},
+  WARRANTY_REPL:{type:'IN',  kind:'receive', label:'Warranty replacement unit', from:[null,'closed'], to:'in_stock', zeroCost:true},
   OPENING:      {type:'IN',  kind:'hidden',  label:'Opening balance', from:[null], to:'in_stock'},
   ISSUE_PROJECT:{type:'OUT', kind:'issue',   label:'Issued to project', from:['in_stock'], to:'issued', project:'issue'},
   ISSUE_OTHER:  {type:'OUT', kind:'issue',   label:'Issued — sale, service or other', from:['in_stock'], to:'issued'},
@@ -527,11 +574,12 @@ auth.onAuthStateChanged(async user => {
   $('#whoName').textContent = me.name; $('#whoRole').textContent = roleName(me.role);
   $$('.mgr, .mgrc').forEach(el => el.hidden = !isMgr);
   $$('[data-roles]').forEach(el => el.hidden = !el.dataset.roles.split(' ').includes(me.role));
+  setupNav();
   $('#adjHint').textContent = isMgr ? 'As a manager, your adjustments post immediately.' : 'Adjustments go to a manager for approval before stock changes.';
   $('#app').style.display='block';
   startListeners();
   if (!formsBuilt){ buildForms(); formsBuilt = true; }
-  showTab('stock');
+  showTab(me.role==='dispatcher' ? 'deliveries' : 'stock');
 });
 function showBlocked(msg){ $('#blockedMsg').textContent = msg; $('#blockedView').hidden = false; }
 
@@ -560,6 +608,7 @@ function schedule(){ cancelAnimationFrame(rafId); rafId = requestAnimationFrame(
 // ============================================================ derived numbers
 const item = code => S.items[code];
 const locName = id => S.locations[id]?.name || id;
+const locLabel = (id, stored) => S.locations[id]?.name || stored || id || '';
 const storeLocs = () => Object.values(S.locations).filter(l => l.kind !== 'faulty').sort((a,b)=> a.id==='MAIN'?-1:b.id==='MAIN'?1:a.name.localeCompare(b.name));
 const allLocs = () => [...storeLocs(), ...Object.values(S.locations).filter(l => l.kind === 'faulty')];
 function qtyAt(code, loc){ return S.stock[stockId(code, loc)]?.qty || 0; }
@@ -697,30 +746,29 @@ function buildForms(){
     FORM_STATE[id] = {serials:[]};
     const reasons = Object.entries(REASONS).filter(([k,r]) => r.kind===kind);
     f.innerHTML = `
-      <div class="scanbox"><span>▦</span><input class="scan" placeholder="Scan item barcode or type code, then Enter" autocomplete="off"></div>
+      <div class="scanbox"><span>▦</span><input class="scan" aria-label="Scan item barcode" placeholder="Scan item barcode or type code, then Enter" autocomplete="off"></div>
       <div class="msg" data-scanmsg></div>
       <div class="row">
-        <div><label>Item</label><select name="item"></select></div>
-        <div><label>Reason</label><select name="reason" ${reasons.length<2?'disabled':''}>${reasons.map(([k,r])=>`<option value="${k}">${esc(r.label)}</option>`).join('')}</select></div>
+        <div><label for="${id}-item">Item</label><select name="item" id="${id}-item"></select></div>
+        <div><label for="${id}-reason">Reason</label><select name="reason" id="${id}-reason" ${reasons.length<2?'disabled':''}>${kind==='adjust' ? '<option value="">— add or remove? —</option>' : ''}${reasons.map(([k,r])=>`<option value="${k}">${esc((r.sign>0?'Add: ':r.sign<0?'Remove: ':'') + r.label)}</option>`).join('')}</select></div>
       </div>
       <div class="row">
-        <div><label>${kind==='transfer'?'From location':'Location'}</label><select name="loc"></select></div>
-        ${kind==='transfer' ? '<div><label>To location</label><select name="toLoc"></select></div>' : '<div data-proj><label>Project</label><select name="project"></select></div>'}
+        <div><label for="${id}-loc">${kind==='transfer'?'From location':'Location'}</label><select name="loc" id="${id}-loc"></select></div>
+        ${kind==='transfer' ? `<div><label for="${id}-to">To location</label><select name="toLoc" id="${id}-to"></select></div>` : `<div data-proj><label for="${id}-proj">Project</label><select name="project" id="${id}-proj"></select></div>`}
       </div>
       <div data-projinfo></div>
       <div data-serialbox hidden>
-        <label>Serial numbers — scan each unit</label>
-        <div class="scanbox serial"><span>#</span><input class="serialscan" placeholder="Scan serial number, then Enter" autocomplete="off"></div>
+        <label for="${id}-sn">Serial numbers — scan each unit</label>
+        <div class="scanbox serial"><span>#</span><input class="serialscan" id="${id}-sn" placeholder="Scan serial number, then Enter" autocomplete="off"></div>
         <div class="chips" data-chips></div>
         <p class="hint" data-serialhint></p>
       </div>
       <div class="row">
-        <div><label>Quantity</label><input name="qty" type="number" min="0.001" step="any"></div>
-        <div data-cost><label>Unit cost ₱ (optional)</label><input name="cost" type="number" min="0" step="any" placeholder="Leave blank if unknown"></div>
+        <div><label for="${id}-qty">Quantity</label><input name="qty" id="${id}-qty" type="number" min="0.001" step="any"></div>
       </div>
       <p class="hint" data-avail></p>
-      <label>Reference (DR, PO, request, gate pass no.)</label><input name="ref">
-      <label>Note</label><input name="note">
+      <label for="${id}-ref">Reference (DR, PO, request, gate pass no.)</label><input name="ref" id="${id}-ref">
+      <label for="${id}-note">Note</label><input name="note" id="${id}-note">
       <label data-override hidden style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" name="override"> Issue anyway, even though it uses stock reserved for other projects</label>
       <button class="btn">Save</button>
       <div class="msg" data-msg></div>`;
@@ -740,13 +788,15 @@ function resetForms(){
   $$('form[data-kind]').forEach(f => { f.reset(); if (FORM_STATE[f.id]) FORM_STATE[f.id].serials = []; f.querySelectorAll('.msg').forEach(m => { m.textContent=''; m.className='msg'; }); });
   openProjectId = null; faultyTarget = null; hRows = [];
   if (typeof openDelId !== 'undefined'){ openDelId = null; delArchive = {}; delListCache = null; Object.keys(LOAD).forEach(k => delete LOAD[k]); }
+  ['#delFilter','#delVehicle','#delDriver','#hItem','#hProject','#hType','#stockLoc','#stockCat'].forEach(sel => { const el = $(sel); if (el) el.selectedIndex = 0; });
+  ['#stockSearch','#itemSearch'].forEach(sel => { const el = $(sel); if (el) el.value = ''; }); if ($('#stockLowOnly')) $('#stockLowOnly').checked = false;
   ['#fFaulty','#fItem','#fUser','#fProject'].forEach(s => $(s)?.reset());
 }
 function fillFormSelects(f){
   const kind = f.dataset.kind;
   const keep = (sel, html) => { if (!sel) return; const v = sel.value; sel.innerHTML = html; if (v && [...sel.options].some(o=>o.value===v)) sel.value = v; };
   const items = Object.values(S.items).sort((a,b)=>a.id.localeCompare(b.id));
-  keep(f.item, items.length ? items.map(i=>`<option value="${esc(i.id)}">${esc(i.id)} — ${esc(i.name)}</option>`).join('') : '<option value="">Add items under Setup first</option>');
+  keep(f.item, items.length ? '<option value="">— scan or choose an item —</option>' + items.map(i=>`<option value="${esc(i.id)}">${esc(i.id)} — ${esc(i.name)}</option>`).join('') : '<option value="">Add items under Setup first</option>');
   const locs = kind==='transfer' ? allLocs() : storeLocs();
   keep(f.loc, locs.map(l=>`<option value="${esc(l.id)}">${esc(l.name)}</option>`).join(''));
   keep(f.toLoc, allLocs().map(l=>`<option value="${esc(l.id)}">${esc(l.name)}</option>`).join(''));
@@ -759,7 +809,6 @@ function refreshForm(f){
   if (!R) return;
   const projBox = f.querySelector('[data-proj]');
   if (projBox) projBox.hidden = !R.project;
-  f.querySelector('[data-cost]').hidden = !R.cost;
   // serials
   const ser = !!it?.serialized, sb = f.querySelector('[data-serialbox]');
   sb.hidden = !ser;
@@ -778,7 +827,8 @@ function refreshForm(f){
   av.textContent = ''; pi.innerHTML = ''; ov.hidden = true;
   if (!it) return;
   const here = qtyAt(it.id, R.fixedLoc || f.loc.value);
-  av.textContent = `At this location: ${fmt(here)} ${it.unit}` + (f.dataset.kind==='issue' ? ` · Available after reservations: ${fmt(available(it.id))} ${it.unit}` : '');
+  const avl = available(it.id);
+  av.textContent = `At this location: ${fmt(here)} ${it.unit}` + (f.dataset.kind==='issue' ? (avl < -1e-9 ? ` · Over-promised by ${fmt(-avl)} ${it.unit}` : ` · Free after reservations: ${fmt(avl)} ${it.unit}`) : '');
   const pid = f.project?.value, p = pid && S.projects[pid];
   if (R.project && p){
     const planned = p.bom?.[it.id] || 0, issued = p.issued?.[it.id] || 0;
@@ -805,7 +855,8 @@ function onItemScan(e, f){
   const code = e.target.value.trim().toUpperCase(); e.target.value='';
   const msg = f.querySelector('[data-scanmsg]'); if (!code) return;
   const it = item(code);
-  if (!it){ msg.className='msg err'; msg.textContent = `No item with code "${code}". Add it under Setup first.`; return; }
+  if (!it){ msg.className='msg err'; msg.textContent = `No item with code "${code}". Add it under Setup first.`; beep(false); return; }
+  beep(true);
   if (f.item.value !== code) FORM_STATE[f.id].serials = [];
   f.item.value = code; refreshForm(f);
   msg.className='msg ok'; msg.textContent = `${it.id} — ${it.name}`;
@@ -816,15 +867,16 @@ function onSerialScan(e, f){
   if (e.key!=='Enter') return; e.preventDefault();
   const s = e.target.value.trim(); e.target.value=''; if (!s) return;
   const st = FORM_STATE[f.id], msg = f.querySelector('[data-msg]');
-  if (st.serials.includes(s)){ msg.className='msg err'; msg.textContent = `${s} is already in the list.`; return; }
-  st.serials.push(s); msg.textContent=''; refreshForm(f);
+  if (st.serials.includes(s)){ msg.className='msg err'; msg.textContent = `${s} is already in the list.`; beep(false); return; }
+  st.serials.push(s); msg.textContent=''; beep(true); refreshForm(f);
 }
 
 async function submitForm(f){
   const msg = f.querySelector('[data-msg]'), btn = f.querySelector('button.btn');
   const R = REASONS[f.reason.value], it = item(f.item.value);
   msg.className='msg';
-  if (!it){ msg.className='msg err'; msg.textContent='Choose an item.'; return; }
+  if (!it){ msg.className='msg err'; msg.textContent='Choose an item.'; beep(false); return; }
+  if (!R){ msg.className='msg err'; msg.textContent='Choose whether you are adding or removing stock.'; beep(false); return; }
   if (f.dataset.kind==='issue'){
     const q = +f.qty.value||0, pid = f.project?.value;
     if (R.project==='issue' && !pid){ msg.className='msg err'; msg.textContent='Choose the project this is issued to.'; return; }
@@ -836,12 +888,17 @@ async function submitForm(f){
     const res = await post({ reason:f.reason.value, itemCode:it.id, loc:f.loc.value, toLoc:f.toLoc?.value,
       qty: it.serialized ? FORM_STATE[f.id].serials.length : f.qty.value, serials:[...FORM_STATE[f.id].serials],
       projectId: REASONS[f.reason.value].project ? (f.project?.value||null) : null,
-      ref:f.ref.value.trim(), note:f.note.value.trim(), unitCost: R.cost ? f.cost.value : null });
+      ref:f.ref.value.trim(), note:f.note.value.trim(), unitCost: null });
     msg.className='msg ok';
     msg.textContent = res.pending ? 'Sent for manager approval. Stock changes once approved.' : `Saved. ${it.id} at this location: ${fmt(res.locAfter)} ${it.unit}. Total on hand: ${fmt(res.onHandAfter)}.`;
-    FORM_STATE[f.id].serials = []; f.qty.value=''; f.ref.value=''; f.note.value=''; if (f.cost) f.cost.value=''; if (f.override) f.override.checked=false;
+    if (!res.pending && f.dataset.kind==='receive'){
+      const lb = document.createElement('button'); lb.type='button'; lb.className='btn ghost small'; lb.style.marginLeft='8px';
+      lb.textContent = `Print labels for ${it.id}`; lb.onclick = () => labelFor(it.id); msg.appendChild(lb);
+    }
+    beep(true);
+    FORM_STATE[f.id].serials = []; f.item.value=''; if (f.dataset.kind==='adjust') f.reason.value=''; f.qty.value=''; f.ref.value=''; f.note.value=''; if (f.cost) f.cost.value=''; if (f.override) f.override.checked=false;
     refreshForm(f); f.querySelector('.scan').focus();
-  } catch(err){ msg.className='msg err'; msg.textContent = friendly(err); }
+  } catch(err){ msg.className='msg err'; msg.textContent = friendly(err); beep(false); }
   btn.disabled = false;
 }
 function friendly(err){
@@ -857,6 +914,13 @@ function renderAll(){
   $$('form[data-kind]').forEach(f => { fillFormSelects(f); refreshForm(f); });
   renderStock(); renderDeliveries(); renderProjects(); renderWarranty(); renderPending(); renderSetup(); renderFleet(); renderLabels(); fillHistoryFilters();
   const n = S.pending.length, b = $('#pendBadge'); b.hidden = !(isMgr && n); b.textContent = n;
+  const dels = Object.values(S.deliveries);
+  const waiting = dels.filter(d => d.status==='requested').length, onRoad = dels.filter(d => d.status==='dispatched').length;
+  const dn = me.role==='keeper' ? waiting : me.role==='dispatcher' ? onRoad : waiting + onRoad, db2 = $('#delBadge');
+  db2.hidden = !dn; db2.textContent = dn;
+  const mb = $('#moreBadge'), secBadges = $$('nav button.sec .badge').filter(x => !x.hidden).reduce((a, x) => a + (+x.textContent || 0), 0);
+  mb.hidden = !secBadges; mb.textContent = secBadges;
+  db2.title = me.role==='keeper' ? 'Deliveries waiting to be loaded' : me.role==='dispatcher' ? 'Trips on the road to close' : 'Waiting to load plus on the road';
 }
 
 function renderStock(){
@@ -877,10 +941,13 @@ function renderStock(){
     if (lowOnly && !isLow) return;
     if (lf && !oh) return;
     count++;
-    rows.push(`<tr class="click ${isLow?'low':''}" data-where="${esc(i.id)}"><td>${esc(i.id)}</td><td>${esc(i.name)}${i.serialized?' <span class="pill p-blue">SN</span>':''}</td>
-      <td class="num"><b>${fmt(oh)}</b></td><td class="num">${lf?'':res?fmt(res):'—'}</td><td class="num">${lf?'':fmt(av)}</td><td>${esc(i.unit)}</td>
-      <td class="num">${i.reorder?fmt(i.reorder):'—'}</td>
-      ${isMgr?`<td class="num">${peso(i.avgCost)}</td><td class="num">${peso(oh*(i.avgCost||0))}</td>`:''}</tr>`);
+    const avCell = lf ? '' : av < -1e-9 ? `<span class="pill p-red">Over-promised ${fmt(-av)}</span>` : fmt(av);
+    const side = lf ? `<b>${fmt(oh)}</b> ${esc(i.unit)}` : av < -1e-9 ? avCell : `<b>${fmt(av)}</b> ${esc(i.unit)}<div class="muted" style="font-size:12px">available</div>`;
+    const meta = [i.id, `On hand ${fmt(oh)}`, !lf && res ? `Reserved ${fmt(res)}` : '', i.reorder ? `Reorder at ${fmt(i.reorder)}` : ''].filter(Boolean).map(esc).join(' · ');
+    rows.push(`<tr class="click ${isLow?'low':''}" data-where="${esc(i.id)}"><td class="hide-sm">${esc(i.id)}</td><td class="c-title">${esc(i.name)}${i.serialized?' <span class="pill p-blue">SN</span>':''}</td>
+      <td class="num hide-sm"><b>${fmt(oh)}</b></td><td class="num hide-sm">${lf?'':res?fmt(res):'—'}</td><td class="num hide-sm">${avCell}</td><td class="hide-sm">${esc(i.unit)}</td>
+      <td class="num hide-sm">${i.reorder?fmt(i.reorder):'—'}</td><td class="c-side sm-only">${side}</td><td class="c-meta">${meta}</td>
+      </tr>`);
   });
   $('#stockBody').innerHTML = rows.join('') || `<tr><td colspan="9" class="muted">${Object.keys(S.items).length?'Nothing matches.':'No items yet. Add them under Setup.'}</td></tr>`;
   $$('#stockBody tr[data-where]').forEach(tr => tr.onclick = () => whereIs(tr.dataset.where));
@@ -889,7 +956,6 @@ function renderStock(){
     <div><b class="${low?'neg':''}">${low}</b><span>Low stock</span></div>
     <div><b>${openProjects().length}</b><span>Open projects</span></div>
     <div><b>${faulty}</b><span>Units in warranty</span></div>
-    ${isMgr?`<div><b>${peso(value)}</b><span>Inventory value</span></div>`:''}
     ${isMgr && S.pending.length?`<div><b class="neg">${S.pending.length}</b><span>Awaiting approval</span></div>`:''}`;
 }
 ['#stockSearch','#stockLoc','#stockCat','#stockLowOnly'].forEach(s => $(s).addEventListener('input', renderStock));
@@ -907,8 +973,10 @@ function renderProjects(){
     const lines = Object.keys(p.bom||{}).length;
     const planned = Object.values(p.bom||{}).reduce((a,b)=>a+b,0), issuedOnList = Object.keys(p.bom||{}).reduce((a,c)=>a+Math.min(p.issued?.[c]||0, p.bom[c]),0);
     const pct = planned ? Math.round(issuedOnList/planned*100) : 0, short = p.status==='closed' ? 0 : projShort(p);
-    return `<tr class="click" data-p="${esc(p.id)}"><td>${esc(p.code)}</td><td>${esc(p.name)}</td><td>${esc(p.client)}</td><td>${pill(PROJ_STATUS,p.status)}</td>
-      <td class="num">${lines}</td><td class="num">${lines?pct+'%':'—'}</td><td class="num ${short?'neg':''}">${short||'—'}</td>${isMgr?`<td class="num">${peso(p.issuedCost)}</td>`:''}</tr>`;
+    const over = Object.keys(p.issued||{}).some(c => (p.issued[c]||0) > (p.bom?.[c]||0) + 1e-9);
+    const meta = [p.code, p.client, lines ? `${lines} line(s), ${pct}% issued` : 'No material list', short ? `${short} short now` : ''].filter(Boolean).map(esc).join(' · ');
+    return `<tr class="click" data-p="${esc(p.id)}"><td class="hide-sm">${esc(p.code)}</td><td class="c-title">${esc(p.name)}</td><td class="hide-sm">${esc(p.client)}</td><td class="c-side">${pill(PROJ_STATUS,p.status)}${over?' <span class="pill p-red">Over-issued</span>':''}</td>
+      <td class="num hide-sm">${lines}</td><td class="num hide-sm">${lines?pct+'%':'—'}</td><td class="num hide-sm ${short?'neg':''}">${short||'—'}</td><td class="c-meta">${meta}</td></tr>`;
   }).join('') || '<tr><td colspan="8" class="muted">No projects yet.</td></tr>';
   $$('#projBody tr[data-p]').forEach(tr => tr.onclick = () => openProject(tr.dataset.p));
   if (openProjectId) renderProjectDetail();
@@ -930,13 +998,18 @@ $('#fProject').addEventListener('submit', async e => {
 
 function openProject(id){ openProjectId = id; $('#projList').hidden = true; $('#projDetail').hidden = false; renderProjectDetail(); loadProjectHistory(id); window.scrollTo(0,0); }
 function closeProject(){ openProjectId = null; $('#projList').hidden = false; $('#projDetail').hidden = true; }
-let projHistory = [];
+let projHistory = [], projDels = [];
 async function loadProjectHistory(id){
   try { const snap = await db.collection('movements').where('projectId','==',id).get();
     projHistory = snap.docs.map(d=>({id:d.id,...d.data()})).filter(m=>m.status==='posted').sort((a,b)=>(b.at?.seconds||0)-(a.at?.seconds||0));
   } catch(e){ projHistory = []; }
+  try { const snap = await db.collection('deliveries').where('projectId','==',id).get();
+    projDels = snap.docs.map(d=>({id:d.id,...d.data()}));
+    projDels.forEach(x => { if (!S.deliveries[x.id]) delArchive[x.id] = x; });
+  } catch(e){ projDels = []; }
   renderProjectDetail();
 }
+function openDeliveryFromProject(id){ showTab('deliveries'); openDelivery(id); }
 function renderProjectDetail(){
   const p = S.projects[openProjectId], box = $('#projDetail');
   const ae = document.activeElement; if (p && box.contains(ae) && /^(INPUT|SELECT)$/.test(ae.tagName)) return;
@@ -948,7 +1021,7 @@ function renderProjectDetail(){
     const remaining = Math.max(0, planned-issued), free = usableOnHand(code) - reserved(code, p.id), short = p.status!=='closed' && remaining > free ? remaining - Math.max(free,0) : 0;
     return `<tr><td>${esc(code)}</td><td>${esc(it.name)}</td>
       <td class="num">${isMgr && p.status!=='closed' && code in (p.bom||{}) ? `<input type="number" min="0" step="any" value="${planned}" style="width:90px;text-align:right" data-bom="${esc(code)}">` : fmt(planned)}</td>
-      <td class="num">${fmt(issued)}</td><td class="num">${fmt(remaining)}</td><td class="num">${fmt(Math.max(free,0))}</td>
+      <td class="num">${fmt(issued)}${issued > planned + 1e-9 ? ` <span class="pill p-red">+${fmt(issued-planned)} over</span>` : ''}</td><td class="num">${fmt(remaining)}</td><td class="num">${fmt(Math.max(free,0))}</td>
       <td class="num ${short?'neg':''}">${short?fmt(short):'—'}</td><td>${esc(it.unit)}</td>
       <td>${isMgr && p.status!=='closed' && code in (p.bom||{}) ? `<button class="btn ghost small" data-rmbom="${esc(code)}">Remove</button>`:''}</td></tr>`;
   }).join('');
@@ -958,11 +1031,11 @@ function renderProjectDetail(){
         ${p.status!=='closed' && canDisp ?`<button class="btn small" onclick="newDeliveryForProject('${esc(p.id)}')">New delivery</button>`:''}
         ${p.status!=='closed' && canPost ?`<button class="btn ghost small" onclick="issueForProject('${esc(p.id)}')">Issue materials</button>`:''}</div>
       <h2>${esc(p.code)} · ${esc(p.name)} ${pill(PROJ_STATUS,p.status)}</h2>
-      <p class="muted" style="margin:0">${p.client?'Client: '+esc(p.client)+' · ':''}${isMgr?'Material cost so far: <b>'+peso(p.issuedCost)+'</b>':''}</p>
+      <p class="muted" style="margin:0">${p.client?'Client: '+esc(p.client):''}</p>
       ${isMgr?`<div class="row3"><div><label for="pdName">Name</label><input id="pdName" value="${esc(p.name)}"></div>
         <div><label for="pdClient">Client</label><input id="pdClient" value="${esc(p.client)}"></div>
         <div><label for="pdStatus">Status</label><select id="pdStatus">${Object.entries(PROJ_STATUS).map(([k,v])=>`<option value="${k}" ${p.status===k?'selected':''}>${v[0]}</option>`).join('')}</select></div></div>
-        <button class="btn ghost small" style="margin-top:10px" onclick="saveProjectHead()">Save details</button>`:''}
+        <p class="hint">Changes save automatically. <span class="saved" id="pdSaved"></span></p>`:''}
     </div>
     <div class="card">
       <h2>Material list and reservations</h2>
@@ -974,17 +1047,26 @@ function renderProjectDetail(){
         <div class="msg" id="bomMsg"></div>` : ''}
     </div>
     <div class="card">
+      <h2>Deliveries for this project</h2>
+      ${(() => { const ds = [...new Map([...projDels, ...Object.values(S.deliveries).filter(x => x.projectId===p.id)].map(x => [x.id, S.deliveries[x.id] || x])).values()].sort((a,b) => b.code.localeCompare(a.code));
+        return ds.length ? `<div class="scroll"><table class="cards"><thead><tr><th>PL</th><th>Date</th><th>Truck</th><th class="num">Lines</th><th>Status</th></tr></thead><tbody>${ds.map(x => `<tr class="click" onclick="openDeliveryFromProject('${esc(x.id)}')"><td class="c-title">${esc(x.code)}</td><td class="hide-sm">${esc(x.neededDate||'')}</td><td class="hide-sm">${esc(vehName(x.vehicleId))}</td><td class="num hide-sm">${(x.lines||[]).length}</td><td class="c-side">${pill(DSTAT, delState(x))}</td><td class="c-meta">${esc([x.neededDate, vehName(x.vehicleId), (x.lines||[]).length + ' line(s)'].filter(Boolean).join(' · '))}</td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">No deliveries yet.</p>'; })()}
+    </div>
+    <div class="card">
       <h2>Movements for this project</h2>
-      <div class="scroll"><table><thead><tr><th>Date</th><th>Reason</th><th>Item</th><th class="num">Qty</th><th>Reference</th><th>By</th>${isMgr?'<th class="num">Value</th>':''}</tr></thead>
-      <tbody>${projHistory.map(m=>`<tr><td>${dt(m.at)}</td><td>${esc(m.reasonLabel)}</td><td>${esc(m.itemCode)}</td><td class="num ${m.qty>0?'pos':'neg'}">${m.qty>0?'+':''}${fmt(m.qty)}</td><td>${esc(m.ref)}${m.serials?.length?'<div class="muted">SN: '+m.serials.map(esc).join(', ')+'</div>':''}</td><td>${esc(m.byName)}</td>${isMgr?`<td class="num">${peso(Math.abs(m.qty)*(m.unitCost||0))}</td>`:''}</tr>`).join('') || '<tr><td colspan="7" class="muted">Nothing issued yet.</td></tr>'}</tbody></table></div>
+      <div class="scroll"><table><thead><tr><th>Date</th><th>Reason</th><th>Item</th><th class="num">Qty</th><th>Reference</th><th>By</th></tr></thead>
+      <tbody>${projHistory.map(m=>`<tr><td>${dt(m.at)}</td><td>${esc(m.reasonLabel)}</td><td>${esc(m.itemCode)}</td><td class="num ${m.qty>0?'pos':'neg'}">${m.qty>0?'+':''}${fmt(m.qty)}</td><td>${esc(m.ref)}${m.serials?.length?'<div class="muted">SN: '+m.serials.map(esc).join(', ')+'</div>':''}</td><td>${esc(m.byName)}</td></tr>`).join('') || '<tr><td colspan="6" class="muted">Nothing issued yet.</td></tr>'}</tbody></table></div>
     </div>`;
   box.querySelectorAll('[data-bom]').forEach(inp => inp.onchange = () => setBom(inp.dataset.bom, inp.value));
+  ['#pdName','#pdClient','#pdStatus'].forEach(sel => { const el = box.querySelector(sel); if (el) el.onchange = saveProjectHead; });
   box.querySelectorAll('[data-rmbom]').forEach(b => b.onclick = () => removeBom(b.dataset.rmbom));
 }
 async function saveProjectHead(){
-  try { await db.doc('projects/'+openProjectId).update({name:$('#pdName').value.trim(), client:$('#pdClient').value.trim(), status:$('#pdStatus').value, updatedAt:FV().serverTimestamp()}); }
+  const name = $('#pdName').value.trim();
+  if (!name){ alertMsg('The project needs a name.'); return; }
+  try { await db.doc('projects/'+openProjectId).update({name, client:$('#pdClient').value.trim(), status:$('#pdStatus').value, updatedAt:FV().serverTimestamp()}); flashSaved('#pdSaved'); }
   catch(err){ alertMsg(friendly(err)); }
 }
+function flashSaved(sel){ const el = $(sel); if (!el) return; el.textContent = 'Saved ✓'; clearTimeout(el._t); el._t = setTimeout(() => { if (el.isConnected) el.textContent = ''; }, 2200); }
 async function addBomLine(){
   const code = $('#bomItem').value, q = +$('#bomQty').value, m = $('#bomMsg');
   if (!code || !(q>0)){ m.className='msg err'; m.textContent='Choose an item and a planned quantity.'; return; }
@@ -1061,7 +1143,7 @@ async function lookupSerial(s){
     const moves = mv.docs.map(d=>d.data()).filter(m=>m.status==='posted').sort((a,b)=>(a.at?.seconds||0)-(b.at?.seconds||0));
     out.innerHTML = sd.docs.map(d => { const x = d.data(); return `<div class="info"><b>${esc(x.itemCode)}</b> — ${esc(item(x.itemCode)?.name)} · ${pill(SERIAL_STATUS,x.status)}
       ${x.loc?' · at '+esc(locName(x.loc)):''}${x.projectId?' · project '+esc(S.projects[x.projectId]?.code||''):''}${x.fault?' · fault: '+esc(x.fault):''}${x.outcome?' · '+esc(x.outcome):''}</div>`; }).join('')
-      + `<div class="scroll"><table><thead><tr><th>Date</th><th>Reason</th><th>Location</th><th>Project / reference</th><th>By</th></tr></thead><tbody>${moves.map(m=>`<tr><td>${dt(m.at)}</td><td>${esc(m.reasonLabel)}</td><td>${esc(m.locName)}${m.toLocName?' → '+esc(m.toLocName):''}</td><td>${esc(m.projectCode||'')} ${esc(m.ref)}</td><td>${esc(m.byName)}</td></tr>`).join('')}</tbody></table></div>`;
+      + `<div class="scroll"><table><thead><tr><th>Date</th><th>Reason</th><th>Location</th><th>Project / reference</th><th>By</th></tr></thead><tbody>${moves.map(m=>`<tr><td>${dt(m.at)}</td><td>${esc(m.reasonLabel)}</td><td>${esc(locLabel(m.loc, m.locName))}${m.toLocName?' → '+esc(locLabel(m.toLoc, m.toLocName)):''}</td><td>${esc(m.projectCode||'')} ${esc(m.ref)}</td><td>${esc(m.byName)}</td></tr>`).join('')}</tbody></table></div>`;
   } catch(err){ out.innerHTML = `<p class="msg err">${esc(friendly(err))}</p>`; }
 }
 
@@ -1070,7 +1152,7 @@ function renderPending(){
   const rows = S.pending.slice().sort((a,b)=>(a.at?.seconds||0)-(b.at?.seconds||0));
   $('#myPending').innerHTML = rows.map(m=>`<tr><td>${dt(m.at)}</td><td>${esc(m.itemCode)}</td><td class="num ${m.qty>0?'pos':'neg'}">${m.qty>0?'+':''}${fmt(m.qty)}</td><td>${esc(m.reasonLabel)}${m.note?'<div class="muted">'+esc(m.note)+'</div>':''}</td><td>${esc(m.byName)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Nothing waiting.</td></tr>';
   if (!isMgr) return;
-  $('#apBody').innerHTML = rows.map(m=>`<tr><td>${dt(m.at)}</td><td>${esc(m.itemCode)}<div class="muted">${esc(m.itemName)}</div></td><td>${esc(m.locName)}</td>
+  $('#apBody').innerHTML = rows.map(m=>`<tr><td>${dt(m.at)}</td><td>${esc(m.itemCode)}<div class="muted">${esc(m.itemName)}</div></td><td>${esc(locLabel(m.loc, m.locName))}</td>
     <td class="num ${m.qty>0?'pos':'neg'}">${m.qty>0?'+':''}${fmt(m.qty)} ${esc(m.unit)}</td>
     <td>${esc(m.reasonLabel)}${m.note?'<div class="muted">'+esc(m.note)+'</div>':''}${m.serials?.length?'<div class="muted">SN: '+m.serials.map(esc).join(', ')+'</div>':''}</td><td>${esc(m.byName)}</td>
     <td style="white-space:nowrap"><button class="btn small" data-ap="${m.id}">Approve</button> <button class="btn ghost small" data-rj="${m.id}">Reject</button></td></tr>`).join('')
@@ -1110,11 +1192,11 @@ function renderHistory(){
   const fp = $('#hProject').value, ft = $('#hType').value;
   const rows = hRows.filter(m => (!fp || m.projectId===fp) && (!ft || m.type===ft));
   const stPill = m => m.status==='pending' ? ' <span class="pill p-amber">Pending</span>' : m.status==='rejected' ? ' <span class="pill p-gray">Rejected</span>' : '';
-  $('#hBody').innerHTML = rows.map(m => `<tr><td style="white-space:nowrap">${dt(m.at)}</td><td>${esc(m.type)}${stPill(m)}</td>
-    <td>${esc(m.itemCode)}<div class="muted">${esc(m.itemName)}</div></td><td>${esc(m.locName)}${m.toLocName?' → '+esc(m.toLocName):''}</td>
-    <td class="num ${m.type==='TRANSFER'?'':m.qty>0?'pos':'neg'}">${m.type==='TRANSFER'?'':m.qty>0?'+':''}${fmt(m.qty)}</td>
-    <td>${esc(m.reasonLabel)}${m.projectCode?' · '+esc(m.projectCode):''}${m.ref?' · '+esc(m.ref):''}${m.note?'<div class="muted">'+esc(m.note)+'</div>':''}${m.serials?.length?'<div class="muted">SN: '+m.serials.map(esc).join(', ')+'</div>':''}${m.approvedByName?'<div class="muted">'+(m.status==='rejected'?'Rejected':'Approved')+' by '+esc(m.approvedByName)+'</div>':''}</td>
-    <td>${esc(m.byName)}</td>${isMgr?`<td class="num">${m.unitCost!=null?peso(m.unitCost):''}</td>`:''}</tr>`).join('')
+  $('#hBody').innerHTML = rows.map(m => `<tr><td class="hide-sm" style="white-space:nowrap">${dt(m.at)}</td><td class="hide-sm">${esc(m.type)}${stPill(m)}</td>
+    <td class="c-title">${esc(m.itemCode)}<div class="muted">${esc(m.itemName)}</div></td><td class="hide-sm">${esc(locLabel(m.loc, m.locName))}${m.toLocName?' → '+esc(locLabel(m.toLoc, m.toLocName)):''}</td>
+    <td class="num c-side ${m.type==='TRANSFER'?'':m.qty>0?'pos':'neg'}">${m.type==='TRANSFER'?'':m.qty>0?'+':''}${fmt(m.qty)}</td>
+    <td class="c-full">${esc(m.reasonLabel)}${m.projectCode?' · '+esc(m.projectCode):''}${m.ref?' · '+esc(m.ref):''}${m.note?'<div class="muted">'+esc(m.note)+'</div>':''}${m.serials?.length?'<div class="muted">SN: '+m.serials.map(esc).join(', ')+'</div>':''}${m.approvedByName?'<div class="muted">'+(m.status==='rejected'?'Rejected':'Approved')+' by '+esc(m.approvedByName)+'</div>':''}</td>
+    <td class="hide-sm">${esc(m.byName)}</td><td class="c-meta">${dt(m.at)} · ${esc(m.type)}${stPill(m)} · ${esc(locLabel(m.loc, m.locName))}${m.toLocName?' → '+esc(locLabel(m.toLoc, m.toLocName)):''} · ${esc(m.byName)}</td></tr>`).join('')
     || '<tr><td colspan="8" class="muted">No movements.</td></tr>';
 }
 ['#hItem','#hProject'].forEach(s => $(s).addEventListener('change', loadHistory));
@@ -1126,7 +1208,7 @@ function renderSetup(){
   const q = $('#itemSearch').value.trim().toLowerCase();
   $('#itemBody').innerHTML = Object.values(S.items).filter(i => !q || (i.id+' '+i.name).toLowerCase().includes(q)).sort((a,b)=>a.id.localeCompare(b.id)).map(i => `<tr>
     <td>${esc(i.id)}</td><td>${esc(i.name)}</td><td>${esc(i.unit)}</td><td>${catName(i.category)}</td><td>${i.serialized?'Yes':'—'}</td>
-    <td class="num">${fmt(i.reorder)}</td>${isMgr?`<td class="num">${peso(i.avgCost)}</td><td><button class="btn ghost small" data-edit="${esc(i.id)}">Edit</button></td>`:''}</tr>`).join('')
+    <td class="num">${fmt(i.reorder)}</td>${isMgr?`<td><button class="btn ghost small" data-edit="${esc(i.id)}">Edit</button></td>`:''}</tr>`).join('')
     || '<tr><td colspan="8" class="muted">No items yet.</td></tr>';
   $$('#itemBody [data-edit]').forEach(b => b.onclick = () => editItem(b.dataset.edit));
   if (!isMgr) return;
@@ -1138,8 +1220,14 @@ function renderSetup(){
   $('#userBody').innerHTML = Object.values(S.users).sort((a,b)=>a.name.localeCompare(b.name)).map(u => `<tr><td>${esc(u.name)}</td><td>${esc(u.username)}</td>
     <td>${roleName(u.role)}</td><td>${u.active?'<span class="pill p-green">Active</span>':'<span class="pill p-gray">Off</span>'}</td>
     <td>${u.id===me.uid?'<span class="muted">You</span>':`<button class="btn ghost small" data-tog="${u.id}">${u.active?'Turn off':'Turn on'}</button> <select data-urole="${u.id}" style="width:auto;padding:5px 8px">${['keeper','dispatcher','manager'].map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${roleName(r)}</option>`).join('')}</select>`}</td></tr>`).join('');
-  $$('#userBody [data-tog]').forEach(b => b.onclick = () => db.doc('users/'+b.dataset.tog).update({active:!S.users[b.dataset.tog].active}).catch(e=>alertMsg(friendly(e))));
-  $$('#userBody [data-urole]').forEach(sel => sel.onchange = () => db.doc('users/'+sel.dataset.urole).update({role:sel.value}).catch(e=>alertMsg(friendly(e))));
+  $$('#userBody [data-tog]').forEach(b => b.onclick = () => { const u = S.users[b.dataset.tog];
+    dialogForm(u.active ? `Turn off ${esc(u.name)}?` : `Turn on ${esc(u.name)}?`,
+      `<p class="muted">${u.active ? 'They will be signed out and cannot sign in until turned on again. Their history stays.' : 'They can sign in again with their old password.'}</p>`,
+      u.active ? 'Turn off' : 'Turn on', async () => db.doc('users/'+u.id).update({active: !u.active})); });
+  $$('#userBody [data-urole]').forEach(sel => sel.onchange = () => { const u = S.users[sel.dataset.urole], to = sel.value;
+    dialogForm(`Make ${esc(u.name)} a ${esc(roleName(to).toLowerCase())}?`,
+      `<p class="muted">${to==='manager' ? 'Managers can see and change everything, including users and approvals.' : to==='dispatcher' ? 'Dispatchers plan deliveries and the fleet but cannot post stock.' : 'Keepers post stock and load trucks. Their adjustments need approval.'}</p>`,
+      'Change role', async () => db.doc('users/'+u.id).update({role: to}), {onCancel: () => { sel.value = u.role; }}); });
 }
 $('#itemSearch').addEventListener('input', renderSetup);
 
@@ -1161,12 +1249,12 @@ function editItem(code){
     <div class="row"><div><label for="eUnit">Unit</label><input id="eUnit" value="${esc(i.unit)}"></div>
     <div><label for="eCat">Category</label><select id="eCat">${['material','equipment','spare','consumable'].map(c=>`<option value="${c}" ${i.category===c?'selected':''}>${catName(c)}</option>`).join('')}</select></div></div>
     <div class="row"><div><label for="eReorder">Reorder level</label><input id="eReorder" type="number" min="0" step="any" value="${i.reorder||0}"></div>
-    <div><label for="eCost">Average cost ₱</label><input id="eCost" type="number" min="0" step="any" value="${i.avgCost||0}"></div></div>
+    <div></div></div>
     <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="eSer" ${i.serialized?'checked':''} ${(i.onHand||0)!==0?'disabled':''}> Track serial numbers</label>
     ${(i.onHand||0)!==0?'<p class="hint">Serial tracking can only be switched while stock is zero.</p>':''}
-    <p class="hint">Changing average cost revalues all stock of this item. Use it to correct costs, not for routine receiving.</p>`, 'Save', async () => {
+    `, 'Save', async () => {
       await db.doc('items/'+code).update({name:$('#eName').value.trim(), unit:$('#eUnit').value.trim(), category:$('#eCat').value, reorder:+$('#eReorder').value||0,
-        avgCost:+$('#eCost').value||0, serialized: (i.onHand||0)!==0 ? !!i.serialized : $('#eSer').checked, updatedAt:FV().serverTimestamp()});
+        serialized: (i.onHand||0)!==0 ? !!i.serialized : $('#eSer').checked, updatedAt:FV().serverTimestamp()});
   });
 }
 $('#fLoc').addEventListener('submit', async e => {
@@ -1252,7 +1340,7 @@ async function runImport(){
       }
       n++; m.className='msg'; m.textContent = `Imported ${n}…`;
     }
-    m.className='msg ok'; m.textContent = `Done. Imported ${n} item(s) with their opening stock. Set costs and categories under Items.`;
+    m.className='msg ok'; m.textContent = `Done. Imported ${n} item(s) with their opening stock. Set categories and reorder levels under Items.`;
   } catch(err){ m.className='msg err'; m.textContent = friendly(err); btn.disabled = false; }
 }
 
@@ -1261,6 +1349,7 @@ const DSTAT = { draft:['Draft','p-gray'], requested:['Waiting for loading','p-am
   delivered:['Delivered, truck not back','p-blue'], completed:['Completed','p-green'], cancelled:['Cancelled','p-gray'] };
 const CHECKS = [['body','Body: no new dents or scratches'],['tires','Tires'],['lights','Lights and signals'],['brakes','Brakes'],['fluids','Oil and water'],['tools','Tools and spare tire']];
 const roleName = r => ({manager:'Manager', keeper:'Keeper', dispatcher:'Dispatcher'}[r] || r);
+let delSavedAt = 0;
 let openDelId = null, delArchive = {}, delListCache = null, delRefocus = null, delForceNext = false, delFetching = null;
 const LOAD = {};
 const getDel = id => S.deliveries[id] || delArchive[id];
@@ -1336,7 +1425,7 @@ async function markLineZero(did, i){
 }
 function delMovement(d, p){
   const it = item(p.l.itemCode);
-  return {type:'OUT', reason: d.projectId ? 'ISSUE_PROJECT' : 'ISSUE_OTHER', reasonLabel: 'Delivered on ' + d.code, itemCode: it.id, itemName: it.name, unit: it.unit,
+  return {type:'OUT', reason: d.projectId ? 'ISSUE_PROJECT' : 'ISSUE_OTHER', reasonLabel: 'Delivered', itemCode: it.id, itemName: it.name, unit: it.unit,
     loc: p.l.loc, locName: locName(p.l.loc), toLoc: null, qty: -p.q, serials: p.serials, projectId: d.projectId || null,
     projectCode: d.projectId ? (S.projects[d.projectId]?.code || '') : '', ref: d.code + (d.destination ? ' · ' + d.destination : ''), note:'',
     unitCostIn: null, by: me.uid, byName: me.name, deliveryId: d.id, deliveryLine: p.i, deliveryCode: d.code};
@@ -1347,8 +1436,9 @@ function postLoaded(did){
   for (const [i, l] of d.lines.entries()){
     if (l.posted || l.loc !== loc) continue;
     const it = item(l.itemCode), s = st.lines[i] || {};
-    const q = it?.serialized ? (s.serials||[]).length : (s.qty === '' || s.qty == null ? 0 : +s.qty);
-    const fail = t => { msg.className = 'msg err'; msg.textContent = t; };
+    const fail = t => { msg.className = 'msg err'; msg.textContent = t; beep(false); };
+    if (!it?.serialized && (s.qty === '' || s.qty == null)) return fail(`${l.itemCode}: enter the quantity you loaded (0 if none).`);
+    const q = it?.serialized ? (s.serials||[]).length : +s.qty;
     if (!(q >= 0)) return fail(`${l.itemCode}: enter the quantity loaded.`);
     if (q > l.qty + 1e-9) return fail(`${l.itemCode}: ${fmt(q)} loaded is more than the ${fmt(l.qty)} requested.`);
     if (q > qtyAt(l.itemCode, loc) + 1e-9) return fail(`${l.itemCode}: only ${fmt(qtyAt(l.itemCode, loc))} on the shelf at ${locName(loc)}.`);
@@ -1435,14 +1525,29 @@ function renderDelList(){
   let rows = (f==='open' && !v && !dr) ? Object.values(S.deliveries) : (delListCache || []).map(r => S.deliveries[r.id] || r);
   rows = rows.slice().sort((a,b) => f==='open' ? String(a.neededDate).localeCompare(String(b.neededDate)) || a.code.localeCompare(b.code) : b.code.localeCompare(a.code));
   $('#delBody').innerHTML = rows.map(d => { const ri = returnIssues(d);
-    return `<tr class="click" data-d="${esc(d.id)}"><td>${esc(d.code)}</td><td style="white-space:nowrap">${esc(d.neededDate||'')}</td>
-      <td>${esc(d.destination)}${d.projectId ? '<div class="muted">' + esc(S.projects[d.projectId]?.code || '') + '</div>' : ''}</td>
-      <td>${esc(vehName(d.vehicleId))}</td><td>${esc(crewName(d.driverId))}</td><td class="num">${(d.lines||[]).length}</td>
-      <td>${pill(DSTAT, delState(d))}${ri.length ? ' <span class="pill p-red">Return issue</span>' : ''}</td></tr>`; }).join('')
+    const meta = [d.neededDate, vehName(d.vehicleId), crewName(d.driverId), (d.lines||[]).length + ' line(s)'].filter(Boolean).map(esc).join(' · ');
+    return `<tr class="click" data-d="${esc(d.id)}"><td class="c-title">${esc(d.code)}</td><td class="hide-sm" style="white-space:nowrap">${esc(d.neededDate||'')}</td>
+      <td class="c-full">${esc(d.destination)}${d.projectId ? '<div class="muted">' + esc(S.projects[d.projectId]?.code || '') + '</div>' : ''}</td>
+      <td class="hide-sm">${esc(vehName(d.vehicleId))}</td><td class="hide-sm">${esc(crewName(d.driverId))}</td><td class="num hide-sm">${(d.lines||[]).length}</td>
+      <td class="c-side">${pill(DSTAT, delState(d))}${ri.length ? ' <span class="pill p-red">Return issue</span>' : ''}</td><td class="c-meta">${meta}</td></tr>`; }).join('')
     || `<tr><td colspan="7" class="muted">${f==='open' ? 'No open deliveries.' : 'None found.'}</td></tr>`;
   $$('#delBody tr[data-d]').forEach(tr => tr.onclick = () => openDelivery(tr.dataset.d));
 }
 ['#delFilter','#delVehicle','#delDriver'].forEach(s => $(s).addEventListener('change', loadDelList));
+$('#plScan').addEventListener('keydown', async e => {
+  if (e.key !== 'Enter') return; e.preventDefault();
+  let code = e.target.value.trim().toUpperCase(), m = $('#plScanMsg'); e.target.value = '';
+  if (!code) return;
+  if (/^\d+$/.test(code)) code = 'PL-' + code.padStart(4, '0');
+  let d = Object.values({...delArchive, ...S.deliveries}).find(x => x.code === code);
+  if (!d){
+    try { const snap = await db.collection('deliveries').where('code', '==', code).get();
+      if (!snap.empty){ const x = snap.docs[0]; d = {id: x.id, ...x.data()}; if (!S.deliveries[d.id]) delArchive[d.id] = d; } }
+    catch(err){ m.className = 'msg err'; m.textContent = friendly(err); return; }
+  }
+  if (!d){ m.className = 'msg err'; m.textContent = `No delivery with number ${code}.`; beep(false); return; }
+  beep(true); m.textContent = ''; openDelivery(d.id);
+});
 $('#newDelBtn').addEventListener('click', () => newDelivery().then(r => openDelivery(r.id)).catch(e => alertMsg(friendly(e))));
 function openDelivery(id){ openDelId = id; $('#delList').hidden = true; $('#delDetail').hidden = false; renderDeliveryDetail(true); window.scrollTo(0,0); }
 function closeDelivery(){ openDelId = null; $('#delList').hidden = false; $('#delDetail').hidden = true; renderDelList(); }
@@ -1474,7 +1579,7 @@ function renderDeliveryDetail(force){
   const editLines = editHead && !anyPosted;
   // actions
   const acts = [];
-  if (canDisp && d.status==='draft') acts.push('<button class="btn small" data-act="submit">Send to warehouse</button>', '<button class="btn ghost small" data-act="delete">Delete draft</button>');
+  if (canDisp && d.status==='draft') acts.push('<button class="btn small" data-act="submit">Send to warehouse</button>');
   if (canDisp && d.status==='requested' && !lines.some(l => (l.loadedQty||0) > 0)) acts.push('<button class="btn ghost small" data-act="cancel">Cancel delivery</button>');
   if (['draft','requested'].includes(d.status) && lines.some(l => !l.posted)) acts.push('<button class="btn ghost small" data-act="picklist">Print pick list</button>');
   if (['dispatched','completed'].includes(d.status)) acts.push('<button class="btn small" data-act="packlist">Print packing list / DR</button>');
@@ -1508,24 +1613,27 @@ function renderDeliveryDetail(force){
   }
   const origin = [d.backorderOf && 'Backorder of ' + esc(d.backorderOf), d.backorderCode && 'Backorder: ' + esc(d.backorderCode)].filter(Boolean).join(' · ');
   // lines
-  const locOpts = l => storeLocs().map(loc => `<option value="${esc(loc.id)}" ${loc.id===l.loc ? 'selected' : ''}>${esc(loc.name)} (free ${fmt(Math.max(0, locFree(l.itemCode, loc.id, d.id)))})</option>`).join('');
+  const locOpts = l => storeLocs().map(loc => `<option value="${esc(loc.id)}" ${loc.id===l.loc ? 'selected' : ''}>${esc(loc.name)} (${fmt(Math.max(0, locFree(l.itemCode, loc.id, d.id)))} on shelf)</option>`).join('');
+  const freeFor = c => usableOnHand(c) - reserved(c, d.projectId, d.id);
+  const reservedBy = c => openProjects().filter(p => p.id !== d.projectId && reservedFor(p, c) > 0).map(p => p.code);
+  const openStatus = ['draft','requested'].includes(d.status);
   const lineRows = lines.map((l, i) => {
     const it = item(l.itemCode) || {name:'(deleted item)', unit:''}, free = locFree(l.itemCode, l.loc, d.id);
     const status = l.posted
       ? ((l.loadedQty||0) >= l.qty ? `<span class="pill p-green">Loaded ${fmt(l.loadedQty)}</span>` : `<span class="pill p-red">Loaded ${fmt(l.loadedQty||0)} of ${fmt(l.qty)}</span>`)
-      : d.status==='cancelled' ? '' : l.qty > free + 1e-9 ? `<span class="pill p-amber">Only ${fmt(Math.max(0, free))} free there</span>` : '<span class="pill p-gray">To load</span>';
-    return `<tr><td>${esc(l.itemCode)}<div class="muted">${esc(it.name)}</div></td>
-      <td class="num">${editLines ? `<input type="number" min="0.001" step="any" value="${l.qty}" style="width:90px;text-align:right" data-lqty="${i}">` : fmt(l.qty)} ${esc(it.unit)}</td>
-      <td>${editLines ? `<select data-lloc="${i}">${locOpts(l)}</select>` : esc(locName(l.loc))}</td>
-      <td>${status}${l.serials?.length ? '<div class="muted">SN: ' + l.serials.map(esc).join(', ') + '</div>' : ''}</td>
+      : !openStatus ? '' : l.qty > free + 1e-9 ? `<span class="pill p-red">Can load ${fmt(Math.max(0, free))}, short ${fmt(l.qty - Math.max(0, free))}</span>`
+      : freeFor(l.itemCode) < -1e-9 ? `<span class="pill p-amber">Uses stock reserved for ${esc(reservedBy(l.itemCode).join(', ') || 'other projects')}</span>` : '<span class="pill p-green">Ready to load</span>';
+    return `<tr><td class="c-title">${esc(l.itemCode)}<div class="muted">${esc(it.name)}</div></td>
+      <td class="num">${editLines ? `<input type="number" min="0.001" step="any" value="${l.qty}" style="width:90px;text-align:right" aria-label="Quantity, ${esc(l.itemCode)}" data-lqty="${i}">` : fmt(l.qty)} ${esc(it.unit)}</td>
+      <td>${editLines ? `<select data-lloc="${i}" aria-label="Warehouse, ${esc(l.itemCode)}">${locOpts(l)}</select>` : esc(locName(l.loc))}</td>
+      <td class="c-side">${status}${l.serials?.length ? '<div class="muted">SN: ' + l.serials.map(esc).join(', ') + '</div>' : ''}</td>
       <td>${editLines ? `<button class="btn ghost small" data-lrm="${i}">Remove</button>` : ''}</td></tr>`;
   }).join('');
   const byItem = {}; lines.filter(l => !l.posted).forEach(l => byItem[l.itemCode] = (byItem[l.itemCode]||0) + (+l.qty||0));
-  const freeFor = c => usableOnHand(c) - reserved(c, d.projectId, d.id);
-  const overs = ['draft','requested'].includes(d.status) ? Object.entries(byItem).filter(([c, q]) => q > freeFor(c) + 1e-9) : [];
+  const overs = openStatus ? Object.entries(byItem).filter(([c, q]) => q > freeFor(c) + 1e-9) : [];
   const addRow = editLines ? `<div class="scanbox" style="margin-top:12px"><span>▦</span><input class="scan" id="dvScan" placeholder="Scan or type item code, then Enter" autocomplete="off"></div>
-    <div class="toolbar" style="margin-top:8px"><select id="dvItem">${Object.values(S.items).sort((a,b) => a.id.localeCompare(b.id)).map(i => `<option value="${esc(i.id)}">${esc(i.id)} — ${esc(i.name)}</option>`).join('')}</select>
-      <input id="dvQty" type="number" min="0.001" step="any" placeholder="Qty" style="max-width:120px"><button class="btn small" data-act="addline">Add to list</button></div>
+    <div class="toolbar" style="margin-top:8px"><select id="dvItem" aria-label="Item to add"><option value="">— scan or choose an item —</option>${Object.values(S.items).sort((a,b) => a.id.localeCompare(b.id)).map(i => `<option value="${esc(i.id)}">${esc(i.id)} — ${esc(i.name)}</option>`).join('')}</select>
+      <input id="dvQty" aria-label="Quantity to add" type="number" min="0.001" step="any" placeholder="Qty" style="max-width:120px"><button class="btn small" data-act="addline">Add to list</button></div>
     <p class="hint">The app takes the item from the warehouse with the most free stock, or splits it across warehouses. You can change the warehouse on each line.</p>` : '';
   // loading (keeper)
   let loadHTML = '';
@@ -1535,19 +1643,20 @@ function renderDeliveryDetail(force){
     if (!pendingLocs.includes(LS.loc)) LS.loc = pendingLocs[0] || null;
     if (LS.loc){
       const rowsL = lines.map((l, i) => ({l, i})).filter(x => !x.l.posted && x.l.loc===LS.loc).map(({l, i}) => {
-        const it = item(l.itemCode) || {}, s = LS.lines[i] ||= {qty: it.serialized ? null : l.qty, serials: []};
+        const it = item(l.itemCode) || {}, s = LS.lines[i] ||= {qty: null, serials: []};
         const input = it.serialized
-          ? `<input id="ls_${i}" data-lser="${i}" placeholder="Scan serial, then Enter" autocomplete="off" style="max-width:220px">
+          ? `<input id="ls_${i}" aria-label="Serial number, ${esc(l.itemCode)}" data-lser="${i}" placeholder="Scan serial, then Enter" autocomplete="off" style="max-width:220px">
              <div class="chips">${s.serials.map((sn, k) => `<span class="chip">${esc(sn)}<button type="button" data-lsrm="${i}:${k}" aria-label="Remove ${esc(sn)}">×</button></span>`).join('')}</div>
              <div class="muted">${s.serials.length} of ${fmt(l.qty)} scanned</div>`
-          : `<input id="lq_${i}" type="number" min="0" step="any" value="${s.qty ?? ''}" data-lload="${i}" style="width:100px;text-align:right">`;
-        return `<tr><td>${esc(l.itemCode)}<div class="muted">${esc(it.name)}</div></td><td class="num">${fmt(l.qty)} ${esc(it.unit)}</td><td class="num">${fmt(qtyAt(l.itemCode, LS.loc))}</td><td>${input}</td></tr>`;
+          : `<input id="lq_${i}" aria-label="Quantity loaded, ${esc(l.itemCode)}" type="number" min="0" step="any" value="${s.qty ?? ''}" data-lload="${i}" style="width:100px;text-align:right">`;
+        return `<tr><td class="c-title">${esc(l.itemCode)}<div class="muted">${esc(it.name)}</div></td><td class="num hide-sm">${fmt(l.qty)} ${esc(it.unit)}</td><td class="num hide-sm">${fmt(qtyAt(l.itemCode, LS.loc))}</td>
+          <td class="c-meta">Requested <b>${fmt(l.qty)} ${esc(it.unit)}</b> · On shelf ${fmt(qtyAt(l.itemCode, LS.loc))}</td><td class="c-full">${input}</td></tr>`;
       }).join('');
       loadHTML = `<div class="card"><h2>Load the truck</h2>
         <div class="toolbar">Warehouse: ${pendingLocs.length > 1 ? `<select id="ldLoc">${pendingLocs.map(x => `<option value="${esc(x)}" ${x===LS.loc ? 'selected' : ''}>${esc(locName(x))}</option>`).join('')}</select>` : `<b>${esc(locName(LS.loc))}</b>`}</div>
         <div class="scanbox"><span>▦</span><input class="scan" id="ldScan" placeholder="Scan an item barcode to jump to its line" autocomplete="off"></div><div class="msg" id="ldScanMsg"></div>
-        <div class="scroll"><table><thead><tr><th>Item</th><th class="num">Requested</th><th class="num">On shelf</th><th>Loaded on truck</th></tr></thead><tbody>${rowsL}</tbody></table></div>
-        <p class="hint">Enter what actually goes on the truck. Less than requested is recorded as short. Posting takes the items out of stock.</p>
+        <div class="scroll"><table class="cards"><thead><tr><th>Item</th><th class="num">Requested</th><th class="num">On shelf</th><th>Loaded on truck (count it)</th></tr></thead><tbody>${rowsL}</tbody></table></div>
+        <p class="hint">Count what actually goes on the truck and enter it. Enter 0 for anything not loaded. Less than requested is recorded as short. Posting takes the items out of stock.</p>
         <button class="btn" data-act="postload">Post loaded items from ${esc(locName(LS.loc))}</button><div class="msg" id="loadMsg"></div></div>`;
     }
   }
@@ -1582,23 +1691,25 @@ function renderDeliveryDetail(force){
   }
   box.innerHTML = `
     <div class="card">
-      <div class="toolbar">${back}<span style="flex:1"></span>${acts.join(' ')}</div>
+      <div class="toolbar">${back}<span class="saved" id="dvSaved"></span><span style="flex:1"></span>${acts.join(' ')}</div>
       <h2>${esc(d.code)} ${pill(DSTAT, st)}</h2>
       ${origin ? '<p class="muted" style="margin:0 0 8px">' + origin + '</p>' : ''}
       ${head}
     </div>
     <div class="card">
       <h2>Items</h2>
-      <div class="scroll"><table><thead><tr><th>Item</th><th class="num">Qty</th><th>From</th><th>Status</th><th></th></tr></thead>
+      <div class="scroll"><table class="cards"><thead><tr><th>Item</th><th class="num">Qty</th><th>From</th><th>Status</th><th></th></tr></thead>
         <tbody>${lineRows || '<tr><td colspan="5" class="muted">No items yet.</td></tr>'}</tbody></table></div>
-      ${overs.length ? `<div class="info warn">Not enough free stock: ${overs.map(([c, q]) => `${esc(c)} ${fmt(q)} requested, ${fmt(Math.max(0, freeFor(c)))} free`).join('; ')}. The warehouse will load what it has and the rest is recorded as short.</div>` : ''}
+      ${overs.length ? `<div class="info warn">${overs.map(([c, q]) => { const rb = reservedBy(c); return `<b>${esc(c)}</b>: ${fmt(q)} requested, only ${fmt(Math.max(0, freeFor(c)))} free to promise${rb.length ? ' after reservations for ' + esc(rb.join(', ')) : ''}.`; }).join('<br>')}<br>Loading takes whatever is on the shelf, including reserved stock. Anything missing is recorded as short.</div>` : ''}
       ${addRow}
     </div>
-    ${loadHTML}${dispHTML}${roadHTML}`;
+    ${loadHTML}${dispHTML}${roadHTML}
+    ${canDisp && d.status==='draft' ? '<div class="danger-zone"><button class="btn link-danger" data-act="delete">Delete this draft</button></div>' : ''}`;
   // wiring
   const on = (sel, ev, fn) => box.querySelectorAll(sel).forEach(el => el.addEventListener(ev, fn));
-  const upd = data => saveDel(d.id, data).catch(e => alertMsg(friendly(e)));
-  const mut = fn => { delForceNext = true; mutateLines(d.id, fn).catch(e => alertMsg(friendly(e))); };
+  const upd = data => saveDel(d.id, data).then(() => { delSavedAt = Date.now(); flashSaved('#dvSaved'); }).catch(e => alertMsg(friendly(e)));
+  const mut = fn => { delForceNext = true; mutateLines(d.id, fn).then(() => { delSavedAt = Date.now(); }).catch(e => alertMsg(friendly(e))); };
+  if (Date.now() - delSavedAt < 2000) flashSaved('#dvSaved');
   on('#dvDest', 'change', e => upd({destination: e.target.value.trim()}));
   on('#dvProj', 'change', e => { const pid = e.target.value || null, data = {projectId: pid};
     if (pid && !$('#dvDest').value.trim()){ const p = S.projects[pid]; data.destination = p.name + (p.client ? ' · ' + p.client : ''); }
@@ -1613,8 +1724,8 @@ function renderDeliveryDetail(force){
   on('[data-lrm]', 'click', e => { const i = +e.currentTarget.dataset.lrm; mut(ls => ls.filter((_, j) => j !== i)); });
   on('#dvScan', 'keydown', e => { if (e.key !== 'Enter') return; e.preventDefault();
     const c = e.target.value.trim().toUpperCase(); e.target.value = ''; if (!c) return;
-    if (!item(c)){ alertMsg(`No item with code "${c}".`); return; }
-    $('#dvItem').value = c; $('#dvQty').focus(); });
+    if (!item(c)){ beep(false); alertMsg(`No item with code "${c}".`); return; }
+    beep(true); $('#dvItem').value = c; $('#dvQty').focus(); });
   on('#dvQty', 'keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); addDelLine(d.id); } });
   on('[data-act]', 'click', e => delAction(d.id, e.currentTarget.dataset.act));
   on('#ldLoc', 'change', e => { LOAD[d.id].loc = e.target.value; renderDeliveryDetail(true); });
@@ -1622,15 +1733,15 @@ function renderDeliveryDetail(force){
   on('[data-lser]', 'keydown', e => { if (e.key !== 'Enter') return; e.preventDefault();
     const i = +e.target.dataset.lser, sn = e.target.value.trim(), s = LOAD[d.id].lines[i], m = $('#loadMsg');
     e.target.value = ''; if (!sn) return;
-    if (s.serials.includes(sn)){ m.className = 'msg err'; m.textContent = `${sn} is already scanned.`; return; }
-    if (s.serials.length >= d.lines[i].qty){ m.className = 'msg err'; m.textContent = 'All units for this line are already scanned.'; return; }
-    s.serials.push(sn); delRefocus = 'ls_' + i; renderDeliveryDetail(true); });
+    if (s.serials.includes(sn)){ m.className = 'msg err'; m.textContent = `${sn} is already scanned.`; beep(false); return; }
+    if (s.serials.length >= d.lines[i].qty){ m.className = 'msg err'; m.textContent = 'All units for this line are already scanned.'; beep(false); return; }
+    beep(true); s.serials.push(sn); delRefocus = 'ls_' + i; renderDeliveryDetail(true); });
   on('[data-lsrm]', 'click', e => { const [i, k] = e.currentTarget.dataset.lsrm.split(':').map(Number); LOAD[d.id].lines[i].serials.splice(k, 1); renderDeliveryDetail(true); });
   on('#ldScan', 'keydown', e => { if (e.key !== 'Enter') return; e.preventDefault();
     const c = e.target.value.trim().toUpperCase(), m = $('#ldScanMsg'); e.target.value = '';
     const i = d.lines.findIndex(l => !l.posted && l.loc === LOAD[d.id].loc && l.itemCode === c);
-    if (i < 0){ m.className = 'msg err'; m.textContent = `${c} is not on this list for ${locName(LOAD[d.id].loc)}.`; return; }
-    m.className = 'msg ok'; m.textContent = `${c} — ${item(c)?.name || ''}`;
+    if (i < 0){ m.className = 'msg err'; m.textContent = `${c} is not on this list for ${locName(LOAD[d.id].loc)}.`; beep(false); return; }
+    beep(true); m.className = 'msg ok'; m.textContent = `${c} — ${item(c)?.name || ''}`;
     const el = document.getElementById('ls_' + i) || document.getElementById('lq_' + i); el.focus(); el.select?.(); });
   if (delRefocus){ const el = document.getElementById(delRefocus); if (el) el.focus(); delRefocus = null; }
 }
@@ -1719,7 +1830,7 @@ function whereIs(code){
         || '<tr><td colspan="4" class="muted">Not in stock anywhere.</td></tr>'}</tbody></table></div>
      ${dels.length ? `<p class="hint">Held for deliveries: ${dels.map(l => `${esc(l.code)} ${fmt(lineHeld(l))} at ${esc(locName(l.loc))}`).join(', ')}</p>` : ''}
      ${projs.length ? `<p class="hint">Reserved for projects: ${projs.map(x => `${esc(x.p.code)} ${fmt(x.r)}`).join(', ')}</p>` : ''}
-     <p><b>Free to promise: ${fmt(available(code))} ${esc(i.unit)}</b></p>`, 'Close', async () => {});
+     <p><b>${available(code) < -1e-9 ? `<span class="neg">Over-promised by ${fmt(-available(code))} ${esc(i.unit)}</span>. More is reserved and held than is on hand.` : `Free to promise: ${fmt(available(code))} ${esc(i.unit)}`}</b></p>`, 'Close', async () => {}, {info:true});
 }
 
 // ---- fleet
@@ -1750,24 +1861,70 @@ $('#fCrew').addEventListener('submit', async e => {
   try { await db.collection('crew').add({name: n, role: $('#crewRole').value, active: true}); e.target.reset(); } catch(err){ alertMsg(friendly(err)); }
 });
 
+// ------------------------------------------------------------ phone navigation, setup sections, labels shortcut, scan sounds
+const PRIMARY = { keeper:['stock','deliveries','receive','issue'], manager:['stock','deliveries','receive','approvals'], dispatcher:['stock','deliveries','projects','history','setup'] };
+function roleTabs(){ return $$('nav button[data-tab]').filter(b => !b.hidden).map(b => b.dataset.tab); }
+function setupNav(){
+  const tabs = roleTabs(), prim = tabs.length > 5 ? PRIMARY[me.role] || tabs.slice(0,4) : tabs;
+  $$('nav button[data-tab]').forEach(b => b.classList.toggle('sec', !prim.includes(b.dataset.tab)));
+  $('#moreBtn').hidden = tabs.length <= 5;
+  // setup sections this role can see
+  const subs = [['items','Items'],['fleet','Fleet'],['locations','Locations'],['users','Users'],['import','Import']]
+    .filter(([k]) => $$(`#setup [data-sub="${k}"]`).some(el => !el.hidden));
+  $('#setupSub').innerHTML = subs.length > 1 ? subs.map(([k,t]) => `<button type="button" data-subtab="${k}">${t}</button>`).join('') : '';
+  $$('#setupSub [data-subtab]').forEach(b => b.onclick = () => showSub(b.dataset.subtab));
+  showSub(subs[0]?.[0]);
+}
+function showSub(k){
+  $$('#setup [data-sub]').forEach(el => el.classList.toggle('subhide', el.dataset.sub !== k));
+  $$('#setupSub [data-subtab]').forEach(b => b.classList.toggle('active', b.dataset.subtab === k));
+}
+$('#moreBtn').addEventListener('click', () => {
+  const secs = $$('nav button.sec[data-tab]').filter(b => !b.hidden);
+  dialogForm('More', `<div class="more-list">${secs.map(b => `<button type="button" data-go="${b.dataset.tab}">${b.innerHTML}</button>`).join('')}</div>`, 'Close', async () => {}, {info:true});
+  $$('#dlgForm [data-go]').forEach(b => b.onclick = () => { $('#dlg').close(); showTab(b.dataset.go); });
+});
+function labelFor(code){
+  Object.keys(copies).forEach(k => copies[k] = 0); copies[code] = 1;
+  showTab('labels'); renderLabels();
+}
+let audioCtx = null;
+function beep(ok){
+  try {
+    audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+    const tones = ok ? [[1320, 0, .08]] : [[330, 0, .12], [262, .16, .16]];
+    tones.forEach(([f, t, len]) => { const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.frequency.value = f; o.type = 'square'; g.gain.value = .05; o.connect(g); g.connect(audioCtx.destination);
+      o.start(audioCtx.currentTime + t); o.stop(audioCtx.currentTime + t + len); });
+  } catch(_){}
+  try { navigator.vibrate?.(ok ? 40 : [80, 60, 80]); } catch(_){}
+}
+
+// ------------------------------------------------------------ connection banner
+function setOnline(){ $('#offline').hidden = navigator.onLine; }
+addEventListener('online', setOnline); addEventListener('offline', setOnline); setOnline();
+
 // ------------------------------------------------------------ dialog + helpers
-function dialogForm(title, body, okLabel, onOk){
+function dialogForm(title, body, okLabel, onOk, opts = {}){
   const d = $('#dlg'), f = $('#dlgForm');
   f.innerHTML = `<h2>${title}</h2>${body}<div class="msg" id="dlgMsg"></div>
-    <div class="toolbar" style="margin:14px 0 0;justify-content:flex-end"><button type="button" class="btn ghost small" id="dlgCancel">Cancel</button><button type="submit" class="btn small" id="dlgOk">${esc(okLabel)}</button></div>`;
-  $('#dlgCancel').onclick = () => d.close();
+    <div class="toolbar" style="margin:14px 0 0;justify-content:flex-end">${opts.info ? '' : '<button type="button" class="btn ghost small" id="dlgCancel">Cancel</button>'}<button type="submit" class="btn small" id="dlgOk">${esc(okLabel)}</button></div>`;
+  const cancel = () => { d.close(); opts.onCancel?.(); };
+  if (!opts.info) $('#dlgCancel').onclick = cancel;
+  d.oncancel = e => { e.preventDefault(); cancel(); };
   f.onsubmit = async e => {
     e.preventDefault(); const b = $('#dlgOk'); b.disabled = true;
     try { await onOk(); d.close(); } catch(err){ $('#dlgMsg').className='msg err'; $('#dlgMsg').textContent = friendly(err); b.disabled = false; }
   };
   d.showModal();
 }
-function alertMsg(t){ dialogForm('Note', `<p>${esc(t)}</p>`, 'OK', async()=>{}); }
+function alertMsg(t){ dialogForm('Note', `<p>${esc(t)}</p>`, 'OK', async()=>{}, {info:true}); }
 
 // ------------------------------------------------------------ tabs
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (b) showTab(b.dataset.tab); });
 function showTab(t){
-  $$('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+  $$('nav button[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+  $('#moreBtn').classList.toggle('active', !!$(`nav button.sec[data-tab="${t}"]`));
   $$('section.tab').forEach(s => s.classList.toggle('active', s.id === t));
   if (t==='history') loadHistory();
   if (t==='projects' && !openProjectId) closeProject();
@@ -1784,21 +1941,18 @@ const csv = rows => rows.map(r => r.map(c => `"${String(c??'').replace(/"/g,'""'
 const today = () => new Date().toISOString().slice(0,10);
 function exportStock(){
   const head = ['Code','Item','Category','Location','On hand','Unit','Reserved (all)','Available (all)','Reorder at'];
-  if (isMgr) head.push('Avg cost','Value');
   const rows = [head];
   Object.values(S.stock).filter(s=>s.qty).sort((a,b)=>a.itemCode.localeCompare(b.itemCode)).forEach(s => {
     const i = item(s.itemCode); if (!i) return;
     const r = [i.id, i.name, catName(i.category), locName(s.loc), s.qty, i.unit, reserved(i.id), available(i.id), i.reorder];
-    if (isMgr) r.push(i.avgCost, (s.qty*(i.avgCost||0)).toFixed(2));
     rows.push(r);
   });
   download(`stock-${today()}.csv`, csv(rows));
 }
 function exportHistory(){
   const head = ['Date','Type','Reason','Status','Code','Item','Location','To location','Qty','Unit','Project','Reference','Note','Serials','By'];
-  if (isMgr) head.push('Unit cost');
   const rows = [head];
-  hRows.forEach(m => { const r = [m.at?.toDate?.().toISOString()||'', m.type, m.reasonLabel, m.status, m.itemCode, m.itemName, m.locName, m.toLocName||'', m.qty, m.unit, m.projectCode||'', m.ref, m.note, (m.serials||[]).join(' '), m.byName]; if (isMgr) r.push(m.unitCost??''); rows.push(r); });
+  hRows.forEach(m => { const r = [m.at?.toDate?.().toISOString()||'', m.type, m.reasonLabel, m.status, m.itemCode, m.itemName, locLabel(m.loc, m.locName), m.toLoc ? locLabel(m.toLoc, m.toLocName) : '', m.qty, m.unit, m.projectCode||'', m.ref, m.note, (m.serials||[]).join(' '), m.byName]; rows.push(r); });
   download(`movements-${today()}.csv`, csv(rows));
 }
 
@@ -1825,7 +1979,7 @@ function renderLabels(){
   items.forEach(i => { if (copies[i.id] === undefined) copies[i.id] = 0; });
   if (document.activeElement?.closest?.('#labelBody')) return;
   $('#labelBody').innerHTML = items.map(i => `<tr><td>${esc(i.id)}</td><td>${esc(i.name)}</td>
-    <td class="num"><input type="number" min="0" value="${copies[i.id]}" style="width:80px;text-align:right" data-copies="${esc(i.id)}"></td></tr>`).join('') || '<tr><td colspan="3" class="muted">No items yet.</td></tr>';
+    <td class="num"><input type="number" min="0" value="${copies[i.id]}" style="width:80px;text-align:right" aria-label="Copies of ${esc(i.id)}" data-copies="${esc(i.id)}"></td></tr>`).join('') || '<tr><td colspan="3" class="muted">No items yet.</td></tr>';
   $$('#labelBody [data-copies]').forEach(inp => inp.oninput = () => setCopies(inp.dataset.copies, inp.value));
   renderLabelPreview();
 }
