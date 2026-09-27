@@ -101,6 +101,17 @@ apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
   .login h1{font-size:22px;margin:0 0 4px}
   #app{display:none}
   .flash{animation:flash .6s} @keyframes flash{from{background:var(--amber-soft)}to{background:transparent}}
+  #delDetail td .pill{white-space:normal}
+  .checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px 14px;margin-top:8px}
+  .chk{display:flex;gap:8px;align-items:center;color:var(--ink);margin:0}
+  .doc h1{font-size:15pt;margin:2px 0 6px} .doc h2{font-size:11.5pt;margin:14px 0 0}
+  .doc table{width:100%;border-collapse:collapse;margin-top:6px}
+  .doc th,.doc td{border:1px solid #000;padding:4px 6px;text-align:left;font-size:9.5pt;color:#000;text-transform:none;letter-spacing:0;background:none}
+  .doc .meta td{border:0;padding:1px 10px 1px 0}
+  .doc .dhead{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+  .doc .dbar svg{width:58mm;height:13mm;display:block}
+  .doc .sig{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:40px}
+  .doc .sig div{border-top:1px solid #000;padding-top:4px;font-size:9pt}
   /* labels */
   #labelPreview{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
   .label{background:#fff;color:#000;border:1px solid #ccc;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5mm 2mm;overflow:hidden;font-family:Arial,Helvetica,sans-serif}
@@ -114,6 +125,7 @@ apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
     body{background:#fff}
     body > *:not(#printArea){display:none !important}
     #printArea{display:block}
+    #printArea.doc{color:#000;font:10pt Arial,Helvetica,sans-serif}
     #printArea .label{border:0;break-inside:avoid}
     #printArea.sz-50x25 .label,#printArea.sz-40x30 .label{break-after:page}
     #printArea.sz-a4{display:grid;grid-template-columns:repeat(3,63.5mm);grid-auto-rows:33.9mm;column-gap:2.5mm;justify-content:center}
@@ -164,14 +176,15 @@ apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
 </header>
 <nav id="tabs">
   <button data-tab="stock" class="active">Stock</button>
-  <button data-tab="receive">Receive</button>
-  <button data-tab="issue">Issue</button>
-  <button data-tab="adjust">Adjust</button>
-  <button data-tab="transfer">Transfer</button>
+  <button data-tab="deliveries">Deliveries</button>
+  <button data-tab="receive" data-roles="manager keeper">Receive</button>
+  <button data-tab="issue" data-roles="manager keeper">Issue</button>
+  <button data-tab="adjust" data-roles="manager keeper">Adjust</button>
+  <button data-tab="transfer" data-roles="manager keeper">Transfer</button>
   <button data-tab="projects">Projects</button>
-  <button data-tab="warranty">Warranty</button>
+  <button data-tab="warranty" data-roles="manager keeper">Warranty</button>
   <button data-tab="history">History</button>
-  <button data-tab="labels">Labels</button>
+  <button data-tab="labels" data-roles="manager keeper">Labels</button>
   <button data-tab="approvals" class="mgr">Approvals<span class="badge" id="pendBadge" hidden></span></button>
   <button data-tab="setup">Setup</button>
 </nav>
@@ -192,8 +205,24 @@ apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
       <thead><tr><th>Code</th><th>Item</th><th class="num">On hand</th><th class="num">Reserved</th><th class="num">Available</th><th>Unit</th><th class="num">Reorder at</th><th class="num mgrc">Avg cost</th><th class="num mgrc">Value</th></tr></thead>
       <tbody id="stockBody"></tbody>
     </table></div>
-    <p class="hint">Reserved = still to be issued to planned and active projects. Available = on hand (outside the faulty area) minus reserved. Low-stock is judged on Available.</p>
+    <p class="hint">Click an item to see which warehouse has it. Reserved = still to be issued to open projects, plus stock held for deliveries waiting to be loaded. Available = on hand (outside the faulty area) minus reserved.</p>
   </div>
+</section>
+
+<!-- DELIVERIES -->
+<section class="tab" id="deliveries">
+  <div id="delList">
+    <div class="card">
+      <div class="toolbar"><h2 style="margin:0;flex:1">Deliveries</h2><button class="btn small" id="newDelBtn" data-roles="manager dispatcher">New delivery</button></div>
+      <div class="toolbar">
+        <select id="delFilter"><option value="open">Open</option><option value="completed">Completed</option><option value="cancelled">Cancelled</option><option value="all">All</option></select>
+        <select id="delVehicle"></select><select id="delDriver"></select>
+      </div>
+      <div class="scroll"><table><thead><tr><th>PL</th><th>Date</th><th>Destination</th><th>Truck</th><th>Driver</th><th class="num">Lines</th><th>Status</th></tr></thead><tbody id="delBody"></tbody></table></div>
+      <p class="muted" id="delNote"></p>
+    </div>
+  </div>
+  <div id="delDetail" hidden></div>
 </section>
 
 <!-- RECEIVE -->
@@ -336,7 +365,7 @@ apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
 
 <!-- SETUP -->
 <section class="tab" id="setup">
-  <div class="card">
+  <div class="card" data-roles="manager keeper">
     <h2>Add item</h2>
     <form id="fItem">
       <div class="row3">
@@ -354,9 +383,21 @@ apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
       <div class="msg" id="itemMsg"></div>
     </form>
   </div>
-  <div class="card">
+  <div class="card" data-roles="manager keeper">
     <div class="toolbar"><h2 style="margin:0;flex:1">Items</h2><input id="itemSearch" placeholder="Search"></div>
     <div class="scroll"><table><thead><tr><th>Code</th><th>Name</th><th>Unit</th><th>Category</th><th>Serials</th><th class="num">Reorder</th><th class="num mgrc">Avg cost</th><th class="mgr"></th></tr></thead><tbody id="itemBody"></tbody></table></div>
+  </div>
+  <div class="card" data-roles="manager dispatcher">
+    <h2>Fleet</h2>
+    <form id="fVeh" class="toolbar"><input id="vehName" required placeholder="Plate or name, e.g. ABC-1234">
+      <select id="vehType"><option>Boom Truck</option><option>Wing Van</option><option>Van</option><option>Forward</option><option>Pickup</option><option>SUV</option><option>Dump Truck</option></select>
+      <button class="btn small">Add vehicle</button></form>
+    <div class="scroll"><table><thead><tr><th>Vehicle</th><th>Type</th><th>Status</th><th></th></tr></thead><tbody id="vehBody"></tbody></table></div>
+    <h3>Drivers and pahinante</h3>
+    <form id="fCrew" class="toolbar"><input id="crewName" required placeholder="Full name">
+      <select id="crewRole"><option value="driver">Driver</option><option value="helper">Pahinante</option></select>
+      <button class="btn small">Add person</button></form>
+    <div class="scroll"><table><thead><tr><th>Name</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody id="crewBody"></tbody></table></div>
   </div>
   <div class="card mgr">
     <h2>Locations</h2>
@@ -373,7 +414,7 @@ apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
       </div>
       <div class="row">
         <div><label for="uPass">Password (at least 6 characters)</label><input id="uPass" type="text" minlength="6" required></div>
-        <div><label for="uRole">Role</label><select id="uRole"><option value="keeper">Warehouse keeper</option><option value="manager">Manager / purchasing</option></select></div>
+        <div><label for="uRole">Role</label><select id="uRole"><option value="keeper">Warehouse keeper</option><option value="dispatcher">Dispatcher</option><option value="manager">Manager / purchasing</option></select></div>
       </div>
       <button class="btn">Create user</button>
       <div class="msg" id="userMsg"></div>
@@ -409,8 +450,8 @@ const serialId = (code, s) => code + '__' + String(s).replace(/[^A-Za-z0-9._-]/g
 const stockId = (code, loc) => code + '__' + loc;
 const CODE_RE = /^[A-Z0-9][A-Z0-9._-]{0,23}$/;
 
-let auth, db, me = null, isMgr = false;
-const S = { items:{}, stock:{}, locations:{}, projects:{}, serials:{}, users:{}, pending:[], bootstrap:false };
+let auth, db, me = null, isMgr = false, canPost = false, canDisp = false;
+const S = { items:{}, stock:{}, locations:{}, projects:{}, serials:{}, users:{}, pending:[], deliveries:{}, vehicles:{}, crew:{}, bootstrap:false };
 let unsubs = [], settingUp = false, formsBuilt = false;
 
 if (!CFG || String(CFG.apiKey).startsWith('PASTE')) {
@@ -482,12 +523,15 @@ auth.onAuthStateChanged(async user => {
   if (!me.active){ showBlocked('Your account is turned off. Ask your manager.'); return; }
   isMgr = me.role === 'manager';
   document.body.classList.toggle('is-mgr', isMgr);
-  $('#whoName').textContent = me.name; $('#whoRole').textContent = isMgr ? 'Manager' : 'Keeper';
+  canPost = ['manager','keeper'].includes(me.role); canDisp = ['manager','dispatcher'].includes(me.role);
+  $('#whoName').textContent = me.name; $('#whoRole').textContent = roleName(me.role);
   $$('.mgr, .mgrc').forEach(el => el.hidden = !isMgr);
+  $$('[data-roles]').forEach(el => el.hidden = !el.dataset.roles.split(' ').includes(me.role));
   $('#adjHint').textContent = isMgr ? 'As a manager, your adjustments post immediately.' : 'Adjustments go to a manager for approval before stock changes.';
   $('#app').style.display='block';
   startListeners();
   if (!formsBuilt){ buildForms(); formsBuilt = true; }
+  showTab('stock');
 });
 function showBlocked(msg){ $('#blockedMsg').textContent = msg; $('#blockedView').hidden = false; }
 
@@ -500,6 +544,14 @@ function startListeners(){
   on(db.collection('projects'), toMap('projects'));
   on(db.collection('serials').where('status','in',['in_stock','issued','faulty','at_supplier']), toMap('serials'));
   on(db.collection('users'), toMap('users'));
+  on(db.collection('vehicles'), toMap('vehicles'));
+  on(db.collection('crew'), toMap('crew'));
+  on(db.collection('deliveries').where('status','in',['draft','requested','dispatched']), snap => {
+    const prev = S.deliveries; S.deliveries = {};
+    snap.forEach(d => S.deliveries[d.id] = {id:d.id, ...d.data()});
+    Object.keys(prev).forEach(k => { if (!S.deliveries[k]) delete delArchive[k]; });
+    schedule();
+  });
   on(db.collection('movements').where('status','==','pending'), snap => { S.pending = snap.docs.map(d => ({id:d.id, ...d.data()})); schedule(); });
 }
 let rafId = 0;
@@ -513,8 +565,8 @@ const allLocs = () => [...storeLocs(), ...Object.values(S.locations).filter(l =>
 function qtyAt(code, loc){ return S.stock[stockId(code, loc)]?.qty || 0; }
 function usableOnHand(code){ return Object.values(S.stock).filter(s => s.itemCode===code && S.locations[s.loc]?.kind !== 'faulty').reduce((a,s)=>a+(s.qty||0),0); }
 function openProjects(){ return Object.values(S.projects).filter(p => p.status==='planned' || p.status==='active'); }
-function reservedFor(p, code){ return Math.max(0, (p.bom?.[code]||0) - (p.issued?.[code]||0)); }
-function reserved(code, exceptId){ return openProjects().filter(p => p.id!==exceptId).reduce((a,p)=>a+reservedFor(p,code),0); }
+function reservedFor(p, code){ return Math.max(0, (p.bom?.[code]||0) - (p.issued?.[code]||0) - projHeld(p.id, code)); }
+function reserved(code, exceptProj, exceptDel){ return openProjects().filter(p => p.id!==exceptProj).reduce((a,p)=>a+reservedFor(p,code),0) + heldTotal(code, exceptDel); }
 function available(code){ return usableOnHand(code) - reserved(code); }
 
 // ============================================================ posting engine
@@ -581,6 +633,14 @@ async function applyMovement(mv, existingRef){
     if (dup) throw new Error(`Serial ${dup} is listed twice.`);
     let pref = null, pdoc = null;
     if (projectId && R.project){ pref = db.doc('projects/'+projectId); pdoc = await tx.get(pref); if (!pdoc.exists) throw new Error('Project not found.'); }
+    let dref = null, ddoc = null;
+    if (mv.deliveryId){
+      dref = db.doc('deliveries/'+mv.deliveryId); ddoc = await tx.get(dref);
+      const ln = ddoc.exists ? ddoc.data().lines?.[mv.deliveryLine] : null;
+      if (!ln) throw new Error('Delivery line not found.');
+      if (ln.posted) throw new Error(`${mv.itemCode} on ${mv.deliveryCode} was already loaded.`);
+      if (ln.itemCode !== mv.itemCode || ln.loc !== mv.loc) throw new Error('The delivery list changed. Reopen it and try again.');
+    }
     // quantity checks
     const decreases = mv.type==='OUT' || mv.type==='TRANSFER' || (mv.type==='ADJUST' && mv.qty < 0);
     if (decreases && q > fromQty + 1e-9) throw new Error(`Not enough stock at ${locName(mv.loc)}. Only ${fmt(fromQty)} ${it.unit} there.`);
@@ -617,6 +677,10 @@ async function applyMovement(mv, existingRef){
       if (to==='in_stock' && R.type==='IN' && mv.reason!=='RETURN_SITE') { upd.fault = FV().delete(); upd.rma = FV().delete(); }
       tx.set(sRefs[i], upd, {merge:true});
     });
+    if (dref){
+      const lines = ddoc.data().lines.map((x, j) => j === mv.deliveryLine ? {...x, posted:true, loadedQty:q, serials:mv.serials, movementId:mref.id, loadedBy:me.name} : x);
+      tx.update(dref, {lines, updatedAt: FV().serverTimestamp()});
+    }
     const final = {...mv, projectId: projectId||null, unitCost: Math.round(unitCost*10000)/10000};
     if (projectId && !final.projectCode) final.projectCode = pdoc?.data().code || S.projects[projectId]?.code || '';
     if (existingRef) tx.update(existingRef, {status:'posted', unitCost: final.unitCost, approvedBy:me.uid, approvedByName:me.name, approvedAt:FV().serverTimestamp()});
@@ -675,6 +739,7 @@ function buildForms(){
 function resetForms(){
   $$('form[data-kind]').forEach(f => { f.reset(); if (FORM_STATE[f.id]) FORM_STATE[f.id].serials = []; f.querySelectorAll('.msg').forEach(m => { m.textContent=''; m.className='msg'; }); });
   openProjectId = null; faultyTarget = null; hRows = [];
+  if (typeof openDelId !== 'undefined'){ openDelId = null; delArchive = {}; delListCache = null; Object.keys(LOAD).forEach(k => delete LOAD[k]); }
   ['#fFaulty','#fItem','#fUser','#fProject'].forEach(s => $(s)?.reset());
 }
 function fillFormSelects(f){
@@ -790,7 +855,7 @@ function friendly(err){
 function renderAll(){
   if (!me) return;
   $$('form[data-kind]').forEach(f => { fillFormSelects(f); refreshForm(f); });
-  renderStock(); renderProjects(); renderWarranty(); renderPending(); renderSetup(); renderLabels(); fillHistoryFilters();
+  renderStock(); renderDeliveries(); renderProjects(); renderWarranty(); renderPending(); renderSetup(); renderFleet(); renderLabels(); fillHistoryFilters();
   const n = S.pending.length, b = $('#pendBadge'); b.hidden = !(isMgr && n); b.textContent = n;
 }
 
@@ -812,12 +877,13 @@ function renderStock(){
     if (lowOnly && !isLow) return;
     if (lf && !oh) return;
     count++;
-    rows.push(`<tr class="${isLow?'low':''}"><td>${esc(i.id)}</td><td>${esc(i.name)}${i.serialized?' <span class="pill p-blue">SN</span>':''}</td>
+    rows.push(`<tr class="click ${isLow?'low':''}" data-where="${esc(i.id)}"><td>${esc(i.id)}</td><td>${esc(i.name)}${i.serialized?' <span class="pill p-blue">SN</span>':''}</td>
       <td class="num"><b>${fmt(oh)}</b></td><td class="num">${lf?'':res?fmt(res):'—'}</td><td class="num">${lf?'':fmt(av)}</td><td>${esc(i.unit)}</td>
       <td class="num">${i.reorder?fmt(i.reorder):'—'}</td>
       ${isMgr?`<td class="num">${peso(i.avgCost)}</td><td class="num">${peso(oh*(i.avgCost||0))}</td>`:''}</tr>`);
   });
   $('#stockBody').innerHTML = rows.join('') || `<tr><td colspan="9" class="muted">${Object.keys(S.items).length?'Nothing matches.':'No items yet. Add them under Setup.'}</td></tr>`;
+  $$('#stockBody tr[data-where]').forEach(tr => tr.onclick = () => whereIs(tr.dataset.where));
   const faulty = Object.values(S.serials).filter(s=>s.status==='faulty'||s.status==='at_supplier').length;
   $('#stockKpis').innerHTML = `<div><b>${Object.keys(S.items).length}</b><span>Items</span></div>
     <div><b class="${low?'neg':''}">${low}</b><span>Low stock</span></div>
@@ -889,7 +955,8 @@ function renderProjectDetail(){
   box.innerHTML = `
     <div class="card">
       <div class="toolbar"><button class="btn ghost small" onclick="closeProject()">← All projects</button><span style="flex:1"></span>
-        ${p.status!=='closed'?`<button class="btn small" onclick="issueForProject('${esc(p.id)}')">Issue materials</button>`:''}</div>
+        ${p.status!=='closed' && canDisp ?`<button class="btn small" onclick="newDeliveryForProject('${esc(p.id)}')">New delivery</button>`:''}
+        ${p.status!=='closed' && canPost ?`<button class="btn ghost small" onclick="issueForProject('${esc(p.id)}')">Issue materials</button>`:''}</div>
       <h2>${esc(p.code)} · ${esc(p.name)} ${pill(PROJ_STATUS,p.status)}</h2>
       <p class="muted" style="margin:0">${p.client?'Client: '+esc(p.client)+' · ':''}${isMgr?'Material cost so far: <b>'+peso(p.issuedCost)+'</b>':''}</p>
       ${isMgr?`<div class="row3"><div><label for="pdName">Name</label><input id="pdName" value="${esc(p.name)}"></div>
@@ -1069,10 +1136,10 @@ function renderSetup(){
   $$('#locBody [data-lren]').forEach(b => b.onclick = () => renameLocation(b.dataset.lren));
   $$('#locBody [data-ldel]').forEach(b => b.onclick = () => removeLocation(b.dataset.ldel));
   $('#userBody').innerHTML = Object.values(S.users).sort((a,b)=>a.name.localeCompare(b.name)).map(u => `<tr><td>${esc(u.name)}</td><td>${esc(u.username)}</td>
-    <td>${u.role==='manager'?'Manager':'Keeper'}</td><td>${u.active?'<span class="pill p-green">Active</span>':'<span class="pill p-gray">Off</span>'}</td>
-    <td>${u.id===me.uid?'<span class="muted">You</span>':`<button class="btn ghost small" data-tog="${u.id}">${u.active?'Turn off':'Turn on'}</button> <button class="btn ghost small" data-role="${u.id}">Make ${u.role==='manager'?'keeper':'manager'}</button>`}</td></tr>`).join('');
+    <td>${roleName(u.role)}</td><td>${u.active?'<span class="pill p-green">Active</span>':'<span class="pill p-gray">Off</span>'}</td>
+    <td>${u.id===me.uid?'<span class="muted">You</span>':`<button class="btn ghost small" data-tog="${u.id}">${u.active?'Turn off':'Turn on'}</button> <select data-urole="${u.id}" style="width:auto;padding:5px 8px">${['keeper','dispatcher','manager'].map(r=>`<option value="${r}" ${u.role===r?'selected':''}>${roleName(r)}</option>`).join('')}</select>`}</td></tr>`).join('');
   $$('#userBody [data-tog]').forEach(b => b.onclick = () => db.doc('users/'+b.dataset.tog).update({active:!S.users[b.dataset.tog].active}).catch(e=>alertMsg(friendly(e))));
-  $$('#userBody [data-role]').forEach(b => b.onclick = () => db.doc('users/'+b.dataset.role).update({role:S.users[b.dataset.role].role==='manager'?'keeper':'manager'}).catch(e=>alertMsg(friendly(e))));
+  $$('#userBody [data-urole]').forEach(sel => sel.onchange = () => db.doc('users/'+sel.dataset.urole).update({role:sel.value}).catch(e=>alertMsg(friendly(e))));
 }
 $('#itemSearch').addEventListener('input', renderSetup);
 
@@ -1189,6 +1256,500 @@ async function runImport(){
   } catch(err){ m.className='msg err'; m.textContent = friendly(err); btn.disabled = false; }
 }
 
+// ------------------------------------------------------------ deliveries (packing lists)
+const DSTAT = { draft:['Draft','p-gray'], requested:['Waiting for loading','p-amber'], loading:['Loading','p-amber'], dispatched:['On the road','p-blue'],
+  delivered:['Delivered, truck not back','p-blue'], completed:['Completed','p-green'], cancelled:['Cancelled','p-gray'] };
+const CHECKS = [['body','Body: no new dents or scratches'],['tires','Tires'],['lights','Lights and signals'],['brakes','Brakes'],['fluids','Oil and water'],['tools','Tools and spare tire']];
+const roleName = r => ({manager:'Manager', keeper:'Keeper', dispatcher:'Dispatcher'}[r] || r);
+let openDelId = null, delArchive = {}, delListCache = null, delRefocus = null, delForceNext = false, delFetching = null;
+const LOAD = {};
+const getDel = id => S.deliveries[id] || delArchive[id];
+const vehName = id => S.vehicles[id]?.name || '';
+const crewName = id => S.crew[id]?.name || '';
+function delState(d){
+  if (d.status==='requested' && (d.lines||[]).some(l => l.posted)) return 'loading';
+  if (d.status==='dispatched' && d.deliveredAt) return 'delivered';
+  return d.status;
+}
+const lineHeld = l => l.posted ? 0 : (+l.qty || 0);
+function heldLines(exceptDel){
+  return Object.values(S.deliveries).filter(d => d.status==='requested' && d.id!==exceptDel)
+    .flatMap(d => (d.lines||[]).map(l => ({...l, deliveryId:d.id, code:d.code, projectId:d.projectId})));
+}
+const heldAt = (code, loc, exceptDel) => heldLines(exceptDel).filter(l => l.itemCode===code && l.loc===loc).reduce((a,l) => a + lineHeld(l), 0);
+const heldTotal = (code, exceptDel) => heldLines(exceptDel).filter(l => l.itemCode===code).reduce((a,l) => a + lineHeld(l), 0);
+const projHeld = (pid, code) => heldLines().filter(l => l.projectId===pid && l.itemCode===code).reduce((a,l) => a + lineHeld(l), 0);
+const locFree = (code, loc, exceptDel) => qtyAt(code, loc) - heldAt(code, loc, exceptDel);
+
+// Picks the warehouse with the most free stock, or splits across warehouses.
+function suggestSplit(d, code, qty){
+  const inThis = loc => (d.lines||[]).filter(l => l.itemCode===code && l.loc===loc && !l.posted).reduce((a,l) => a + (+l.qty||0), 0);
+  const opts = storeLocs().map(l => ({loc:l.id, free: Math.max(0, locFree(code, l.id, d.id) - inThis(l.id))})).filter(o => o.free > 0).sort((a,b) => b.free - a.free);
+  if (!opts.length) return [{loc: storeLocs()[0]?.id, qty}];
+  if (opts[0].free >= qty) return [{loc: opts[0].loc, qty}];
+  const out = []; let rest = qty;
+  for (const o of opts){ if (rest <= 0) break; const t = Math.min(o.free, rest); out.push({loc:o.loc, qty:t}); rest -= t; }
+  if (rest > 0) out[0].qty += rest;
+  return out;
+}
+function returnIssues(d){
+  if (!d.checkIn || !d.checkOut) return [];
+  return CHECKS.filter(([k]) => d.checkOut.items?.[k] !== false && d.checkIn.items?.[k] === false).map(x => x[1]);
+}
+
+// ---- data writes
+async function saveDel(id, data){ await db.doc('deliveries/'+id).update({...data, updatedAt: FV().serverTimestamp()}); }
+async function mutateLines(id, fn){
+  const ref = db.doc('deliveries/'+id);
+  await db.runTransaction(async tx => {
+    const snap = await tx.get(ref), x = snap.data();
+    if (!['draft','requested'].includes(x.status)) throw new Error('This delivery can no longer be changed.');
+    if ((x.lines||[]).some(l => l.posted)) throw new Error('Loading has started, so the item list can no longer be changed.');
+    tx.update(ref, {lines: fn((x.lines||[]).map(l => ({...l}))), updatedAt: FV().serverTimestamp()});
+  });
+}
+async function newDelivery(preset = {}){
+  const cref = db.doc('meta/counters'), ref = db.collection('deliveries').doc();
+  const code = await db.runTransaction(async tx => {
+    const c = await tx.get(cref), n = (c.exists ? (c.data().pl || 0) : 0) + 1, code = 'PL-' + String(n).padStart(4,'0');
+    tx.set(cref, {pl:n}, {merge:true});
+    tx.set(ref, {code, status:'draft', destination: preset.destination || '', projectId: preset.projectId || null, neededDate: preset.neededDate || today(),
+      vehicleId:null, driverId:null, helperIds:[], notes: preset.notes || '', lines: preset.lines || [], backorderOf: preset.backorderOf || null,
+      createdBy: me.uid, createdByName: me.name, createdAt: FV().serverTimestamp(), updatedAt: FV().serverTimestamp()});
+    return code;
+  });
+  return {id: ref.id, code};
+}
+function newDeliveryForProject(pid){
+  const p = S.projects[pid];
+  showTab('deliveries');
+  newDelivery({projectId: pid, destination: p.name + (p.client ? ' · ' + p.client : '')}).then(r => openDelivery(r.id)).catch(e => alertMsg(friendly(e)));
+}
+async function markLineZero(did, i){
+  const ref = db.doc('deliveries/'+did);
+  await db.runTransaction(async tx => {
+    const x = (await tx.get(ref)).data(), lines = x.lines.map(l => ({...l}));
+    if (lines[i].posted) return;
+    lines[i] = {...lines[i], posted:true, loadedQty:0, serials:[], loadedBy: me.name};
+    tx.update(ref, {lines, updatedAt: FV().serverTimestamp()});
+  });
+}
+function delMovement(d, p){
+  const it = item(p.l.itemCode);
+  return {type:'OUT', reason: d.projectId ? 'ISSUE_PROJECT' : 'ISSUE_OTHER', reasonLabel: 'Delivered on ' + d.code, itemCode: it.id, itemName: it.name, unit: it.unit,
+    loc: p.l.loc, locName: locName(p.l.loc), toLoc: null, qty: -p.q, serials: p.serials, projectId: d.projectId || null,
+    projectCode: d.projectId ? (S.projects[d.projectId]?.code || '') : '', ref: d.code + (d.destination ? ' · ' + d.destination : ''), note:'',
+    unitCostIn: null, by: me.uid, byName: me.name, deliveryId: d.id, deliveryLine: p.i, deliveryCode: d.code};
+}
+function postLoaded(did){
+  const d = getDel(did), st = LOAD[did], loc = st.loc, msg = $('#loadMsg');
+  const plan = [];
+  for (const [i, l] of d.lines.entries()){
+    if (l.posted || l.loc !== loc) continue;
+    const it = item(l.itemCode), s = st.lines[i] || {};
+    const q = it?.serialized ? (s.serials||[]).length : (s.qty === '' || s.qty == null ? 0 : +s.qty);
+    const fail = t => { msg.className = 'msg err'; msg.textContent = t; };
+    if (!(q >= 0)) return fail(`${l.itemCode}: enter the quantity loaded.`);
+    if (q > l.qty + 1e-9) return fail(`${l.itemCode}: ${fmt(q)} loaded is more than the ${fmt(l.qty)} requested.`);
+    if (q > qtyAt(l.itemCode, loc) + 1e-9) return fail(`${l.itemCode}: only ${fmt(qtyAt(l.itemCode, loc))} on the shelf at ${locName(loc)}.`);
+    plan.push({l, i, q, serials: [...(s.serials||[])]});
+  }
+  const shorts = plan.filter(p => p.q < p.l.qty);
+  dialogForm(`Post loaded items from ${esc(locName(loc))}?`,
+    `<p>${plan.filter(p => p.q > 0).length} line(s) leave stock now.</p>` +
+    (shorts.length ? `<div class="info warn">Short: ${shorts.map(p => `${esc(p.l.itemCode)} ${fmt(p.q)} of ${fmt(p.l.qty)}`).join(', ')}</div>` : ''),
+    'Post loaded items', async () => {
+      for (const p of plan){
+        if (p.q > 0) await applyMovement(delMovement(d, p), null); else await markLineZero(did, p.i);
+        delete st.lines[p.i];
+      }
+      delForceNext = true;
+    });
+}
+async function makeBackorder(d){
+  const need = {};
+  d.lines.forEach(l => { const s = (+l.qty||0) - (l.loadedQty||0); if (l.posted && s > 0) need[l.itemCode] = (need[l.itemCode]||0) + s; });
+  const lines = [];
+  Object.entries(need).forEach(([code, q]) => suggestSplit({id:null, lines}, code, q).forEach(p => lines.push({itemCode:code, qty:p.qty, loc:p.loc, posted:false})));
+  const r = await newDelivery({destination: d.destination, projectId: d.projectId, notes: 'Backorder of ' + d.code, backorderOf: d.code, lines});
+  await saveDel(d.id, {backorderCode: r.code});
+  openDelivery(r.id);
+}
+async function addDelLine(did){
+  const code = $('#dvItem').value, q = +$('#dvQty').value, it = item(code);
+  if (!it || !(q > 0)){ alertMsg('Choose an item and a quantity.'); return; }
+  if (it.serialized && !Number.isInteger(q)){ alertMsg('Serial-tracked items need a whole number.'); return; }
+  try {
+    await mutateLines(did, ls => {
+      suggestSplit({id: did, lines: ls}, code, q).forEach(p => {
+        const ex = ls.find(l => l.itemCode===code && l.loc===p.loc && !l.posted);
+        if (ex) ex.qty = +(ex.qty + p.qty).toFixed(3); else ls.push({itemCode: code, qty: p.qty, loc: p.loc, posted: false});
+      });
+      return ls;
+    });
+    $('#dvQty').value = ''; delRefocus = 'dvScan'; delForceNext = true;
+  } catch(err){ alertMsg(friendly(err)); }
+}
+
+// ---- vehicle checks
+function checkFormHTML(p){
+  return `<div class="checks">${CHECKS.map(([k,t]) => `<label class="chk"><input type="checkbox" id="${p}_${k}" checked> ${esc(t)} OK</label>`).join('')}</div>
+    <div class="row3"><div><label for="${p}_fuel">Fuel</label><select id="${p}_fuel"><option>Full</option><option>3/4</option><option>1/2</option><option>1/4</option><option>Empty</option></select></div>
+    <div><label for="${p}_odo">Odometer (km)</label><input id="${p}_odo" type="number" min="0"></div>
+    <div><label for="${p}_notes">Notes</label><input id="${p}_notes" placeholder="Describe any issue"></div></div>`;
+}
+function readCheck(p){
+  const items = {}; CHECKS.forEach(([k]) => items[k] = $('#'+p+'_'+k).checked);
+  const odo = $('#'+p+'_odo').value;
+  return {items, fuel: $('#'+p+'_fuel').value, odo: odo === '' ? null : +odo, notes: $('#'+p+'_notes').value.trim(), by: me.uid, byName: me.name, at: FV().serverTimestamp()};
+}
+function checkSummary(c){
+  if (!c) return '—';
+  const bad = CHECKS.filter(([k]) => c.items?.[k] === false).map(x => x[1]);
+  return `${bad.length ? '<span class="neg">Not OK: ' + bad.map(esc).join(', ') + '</span>' : 'All OK'} · Fuel ${esc(c.fuel)}${c.odo != null ? ' · ' + fmt(c.odo) + ' km' : ''}${c.notes ? ' · ' + esc(c.notes) : ''} <span class="muted">(${esc(c.byName)}, ${dt(c.at)})</span>`;
+}
+
+// ---- list
+function renderDeliveries(){ fillDelFilters(); if (openDelId) renderDeliveryDetail(); else renderDelList(); }
+function fillDelFilters(){
+  const keep = (sel, html) => { const v = sel.value; sel.innerHTML = html; if ([...sel.options].some(o => o.value===v)) sel.value = v; };
+  keep($('#delVehicle'), '<option value="">All trucks</option>' + Object.values(S.vehicles).sort((a,b) => a.name.localeCompare(b.name)).map(v => `<option value="${esc(v.id)}">${esc(v.name)}</option>`).join(''));
+  keep($('#delDriver'), '<option value="">All drivers</option>' + Object.values(S.crew).filter(c => c.role==='driver').sort((a,b) => a.name.localeCompare(b.name)).map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join(''));
+}
+async function loadDelList(){
+  const f = $('#delFilter').value, v = $('#delVehicle').value, dr = $('#delDriver').value, note = $('#delNote');
+  if (f==='open' && !v && !dr){ delListCache = null; note.textContent = ''; renderDelList(); return; }
+  note.textContent = 'Loading…';
+  try {
+    let q = db.collection('deliveries');
+    q = v ? q.where('vehicleId','==',v) : dr ? q.where('driverId','==',dr) : f==='all' ? q : q.where('status','==',f);
+    let rows = (await q.get()).docs.map(x => ({id:x.id, ...x.data()}));
+    rows.forEach(r => { if (!S.deliveries[r.id]) delArchive[r.id] = r; });
+    if (v && dr) rows = rows.filter(r => r.driverId===dr);
+    if (f==='open') rows = rows.filter(r => ['draft','requested','dispatched'].includes(r.status)); else if (f!=='all') rows = rows.filter(r => r.status===f);
+    delListCache = rows; note.textContent = ''; renderDelList();
+  } catch(err){ note.textContent = friendly(err); }
+}
+function renderDelList(){
+  const f = $('#delFilter').value, v = $('#delVehicle').value, dr = $('#delDriver').value;
+  let rows = (f==='open' && !v && !dr) ? Object.values(S.deliveries) : (delListCache || []).map(r => S.deliveries[r.id] || r);
+  rows = rows.slice().sort((a,b) => f==='open' ? String(a.neededDate).localeCompare(String(b.neededDate)) || a.code.localeCompare(b.code) : b.code.localeCompare(a.code));
+  $('#delBody').innerHTML = rows.map(d => { const ri = returnIssues(d);
+    return `<tr class="click" data-d="${esc(d.id)}"><td>${esc(d.code)}</td><td style="white-space:nowrap">${esc(d.neededDate||'')}</td>
+      <td>${esc(d.destination)}${d.projectId ? '<div class="muted">' + esc(S.projects[d.projectId]?.code || '') + '</div>' : ''}</td>
+      <td>${esc(vehName(d.vehicleId))}</td><td>${esc(crewName(d.driverId))}</td><td class="num">${(d.lines||[]).length}</td>
+      <td>${pill(DSTAT, delState(d))}${ri.length ? ' <span class="pill p-red">Return issue</span>' : ''}</td></tr>`; }).join('')
+    || `<tr><td colspan="7" class="muted">${f==='open' ? 'No open deliveries.' : 'None found.'}</td></tr>`;
+  $$('#delBody tr[data-d]').forEach(tr => tr.onclick = () => openDelivery(tr.dataset.d));
+}
+['#delFilter','#delVehicle','#delDriver'].forEach(s => $(s).addEventListener('change', loadDelList));
+$('#newDelBtn').addEventListener('click', () => newDelivery().then(r => openDelivery(r.id)).catch(e => alertMsg(friendly(e))));
+function openDelivery(id){ openDelId = id; $('#delList').hidden = true; $('#delDetail').hidden = false; renderDeliveryDetail(true); window.scrollTo(0,0); }
+function closeDelivery(){ openDelId = null; $('#delList').hidden = false; $('#delDetail').hidden = true; renderDelList(); }
+function showTrips(kind, id){
+  showTab('deliveries'); $('#delFilter').value = 'all';
+  $('#delVehicle').value = kind==='v' ? id : ''; $('#delDriver').value = kind==='c' ? id : '';
+  loadDelList();
+}
+
+// ---- detail
+function renderDeliveryDetail(force){
+  const box = $('#delDetail'), id = openDelId;
+  if (!id) return;
+  const ae = document.activeElement;
+  if (!force && !delForceNext && box.contains(ae) && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)) return;
+  delForceNext = false;
+  const back = '<button class="btn ghost small" onclick="closeDelivery()">← All deliveries</button>';
+  const d = getDel(id);
+  if (!d){
+    box.innerHTML = `<div class="card">${back}<p class="muted">Loading…</p></div>`;
+    if (delFetching !== id){ delFetching = id; db.doc('deliveries/'+id).get().then(x => { delFetching = null;
+      if (x.exists){ delArchive[id] = {id, ...x.data()}; renderDeliveryDetail(true); }
+      else if (openDelId === id) box.innerHTML = `<div class="card">${back}<p class="muted">This delivery no longer exists.</p></div>`; }); }
+    return;
+  }
+  const lines = d.lines || [], st = delState(d), proj = d.projectId ? S.projects[d.projectId] : null;
+  const anyPosted = lines.some(l => l.posted);
+  const editHead = canDisp && ['draft','requested'].includes(d.status);
+  const editLines = editHead && !anyPosted;
+  // actions
+  const acts = [];
+  if (canDisp && d.status==='draft') acts.push('<button class="btn small" data-act="submit">Send to warehouse</button>', '<button class="btn ghost small" data-act="delete">Delete draft</button>');
+  if (canDisp && d.status==='requested' && !lines.some(l => (l.loadedQty||0) > 0)) acts.push('<button class="btn ghost small" data-act="cancel">Cancel delivery</button>');
+  if (['draft','requested'].includes(d.status) && lines.some(l => !l.posted)) acts.push('<button class="btn ghost small" data-act="picklist">Print pick list</button>');
+  if (['dispatched','completed'].includes(d.status)) acts.push('<button class="btn small" data-act="packlist">Print packing list / DR</button>');
+  const shortLines = lines.filter(l => l.posted && (l.loadedQty||0) < l.qty);
+  if (canDisp && ['dispatched','completed'].includes(d.status) && shortLines.length && !d.backorderCode) acts.push('<button class="btn ghost small" data-act="backorder">Create backorder</button>');
+  // header
+  let head;
+  if (editHead){
+    const vehOpts = Object.values(S.vehicles).filter(v => v.active!==false || v.id===d.vehicleId).sort((a,b) => a.name.localeCompare(b.name))
+      .map(v => `<option value="${esc(v.id)}" ${v.id===d.vehicleId ? 'selected' : ''}>${esc(v.name)} (${esc(v.type)})</option>`).join('');
+    const drvOpts = Object.values(S.crew).filter(c => c.role==='driver' && (c.active!==false || c.id===d.driverId)).sort((a,b) => a.name.localeCompare(b.name))
+      .map(c => `<option value="${esc(c.id)}" ${c.id===d.driverId ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+    const helpers = Object.values(S.crew).filter(c => c.role==='helper' && (c.active!==false || (d.helperIds||[]).includes(c.id))).sort((a,b) => a.name.localeCompare(b.name));
+    const projOpts = Object.values(S.projects).filter(p => p.status!=='closed' || p.id===d.projectId).sort((a,b) => b.code.localeCompare(a.code))
+      .map(p => `<option value="${esc(p.id)}" ${p.id===d.projectId ? 'selected' : ''}>${esc(p.code)} · ${esc(p.name)}</option>`).join('');
+    const clash = d.vehicleId ? Object.values(S.deliveries).filter(x => x.id!==d.id && x.vehicleId===d.vehicleId &&
+      ((x.status==='dispatched' && !x.checkIn) || (['draft','requested'].includes(x.status) && x.neededDate===d.neededDate))) : [];
+    head = `<div class="row"><div><label for="dvDest">Destination / customer</label><input id="dvDest" value="${esc(d.destination)}" placeholder="e.g. Santos Farm, Capas, Tarlac"></div>
+        <div><label for="dvProj">Project</label><select id="dvProj"><option value="">— none (sale, service or other) —</option>${projOpts}</select></div></div>
+      <div class="row3"><div><label for="dvDate">Delivery date</label><input id="dvDate" type="date" value="${esc(d.neededDate||'')}"></div>
+        <div><label for="dvVeh">Truck</label><select id="dvVeh"><option value="">— choose —</option>${vehOpts}</select></div>
+        <div><label for="dvDrv">Driver</label><select id="dvDrv"><option value="">— choose —</option>${drvOpts}</select></div></div>
+      <label>Pahinante</label><div class="chips">${helpers.map(h => `<label class="chk" style="margin-right:14px"><input type="checkbox" data-helper="${esc(h.id)}" ${(d.helperIds||[]).includes(h.id) ? 'checked' : ''}> ${esc(h.name)}</label>`).join('') || '<span class="muted">Add pahinante under Setup → Fleet.</span>'}</div>
+      <label for="dvNotes">Notes for the warehouse and driver</label><input id="dvNotes" value="${esc(d.notes)}">
+      ${clash.length ? `<div class="info warn">${esc(vehName(d.vehicleId))} is also assigned to ${clash.map(x => esc(x.code) + (x.status==='dispatched' ? ' (still on the road)' : ' (same day)')).join(', ')}.</div>` : ''}`;
+  } else {
+    head = `<p class="muted" style="margin:0">${[d.destination && esc(d.destination), proj && esc(proj.code + ' · ' + proj.name), d.neededDate && 'Date ' + esc(d.neededDate),
+      d.vehicleId && 'Truck ' + esc(vehName(d.vehicleId)), d.driverId && 'Driver ' + esc(crewName(d.driverId)),
+      (d.helperIds||[]).length && 'Pahinante ' + d.helperIds.map(crewName).map(esc).join(', ')].filter(Boolean).join(' · ')}</p>
+      ${d.notes ? '<p class="muted" style="margin:6px 0 0">' + esc(d.notes) + '</p>' : ''}`;
+  }
+  const origin = [d.backorderOf && 'Backorder of ' + esc(d.backorderOf), d.backorderCode && 'Backorder: ' + esc(d.backorderCode)].filter(Boolean).join(' · ');
+  // lines
+  const locOpts = l => storeLocs().map(loc => `<option value="${esc(loc.id)}" ${loc.id===l.loc ? 'selected' : ''}>${esc(loc.name)} (free ${fmt(Math.max(0, locFree(l.itemCode, loc.id, d.id)))})</option>`).join('');
+  const lineRows = lines.map((l, i) => {
+    const it = item(l.itemCode) || {name:'(deleted item)', unit:''}, free = locFree(l.itemCode, l.loc, d.id);
+    const status = l.posted
+      ? ((l.loadedQty||0) >= l.qty ? `<span class="pill p-green">Loaded ${fmt(l.loadedQty)}</span>` : `<span class="pill p-red">Loaded ${fmt(l.loadedQty||0)} of ${fmt(l.qty)}</span>`)
+      : d.status==='cancelled' ? '' : l.qty > free + 1e-9 ? `<span class="pill p-amber">Only ${fmt(Math.max(0, free))} free there</span>` : '<span class="pill p-gray">To load</span>';
+    return `<tr><td>${esc(l.itemCode)}<div class="muted">${esc(it.name)}</div></td>
+      <td class="num">${editLines ? `<input type="number" min="0.001" step="any" value="${l.qty}" style="width:90px;text-align:right" data-lqty="${i}">` : fmt(l.qty)} ${esc(it.unit)}</td>
+      <td>${editLines ? `<select data-lloc="${i}">${locOpts(l)}</select>` : esc(locName(l.loc))}</td>
+      <td>${status}${l.serials?.length ? '<div class="muted">SN: ' + l.serials.map(esc).join(', ') + '</div>' : ''}</td>
+      <td>${editLines ? `<button class="btn ghost small" data-lrm="${i}">Remove</button>` : ''}</td></tr>`;
+  }).join('');
+  const byItem = {}; lines.filter(l => !l.posted).forEach(l => byItem[l.itemCode] = (byItem[l.itemCode]||0) + (+l.qty||0));
+  const freeFor = c => usableOnHand(c) - reserved(c, d.projectId, d.id);
+  const overs = ['draft','requested'].includes(d.status) ? Object.entries(byItem).filter(([c, q]) => q > freeFor(c) + 1e-9) : [];
+  const addRow = editLines ? `<div class="scanbox" style="margin-top:12px"><span>▦</span><input class="scan" id="dvScan" placeholder="Scan or type item code, then Enter" autocomplete="off"></div>
+    <div class="toolbar" style="margin-top:8px"><select id="dvItem">${Object.values(S.items).sort((a,b) => a.id.localeCompare(b.id)).map(i => `<option value="${esc(i.id)}">${esc(i.id)} — ${esc(i.name)}</option>`).join('')}</select>
+      <input id="dvQty" type="number" min="0.001" step="any" placeholder="Qty" style="max-width:120px"><button class="btn small" data-act="addline">Add to list</button></div>
+    <p class="hint">The app takes the item from the warehouse with the most free stock, or splits it across warehouses. You can change the warehouse on each line.</p>` : '';
+  // loading (keeper)
+  let loadHTML = '';
+  if (canPost && d.status==='requested'){
+    const pendingLocs = [...new Set(lines.filter(l => !l.posted).map(l => l.loc))];
+    const LS = LOAD[d.id] ||= {loc:null, lines:{}};
+    if (!pendingLocs.includes(LS.loc)) LS.loc = pendingLocs[0] || null;
+    if (LS.loc){
+      const rowsL = lines.map((l, i) => ({l, i})).filter(x => !x.l.posted && x.l.loc===LS.loc).map(({l, i}) => {
+        const it = item(l.itemCode) || {}, s = LS.lines[i] ||= {qty: it.serialized ? null : l.qty, serials: []};
+        const input = it.serialized
+          ? `<input id="ls_${i}" data-lser="${i}" placeholder="Scan serial, then Enter" autocomplete="off" style="max-width:220px">
+             <div class="chips">${s.serials.map((sn, k) => `<span class="chip">${esc(sn)}<button type="button" data-lsrm="${i}:${k}" aria-label="Remove ${esc(sn)}">×</button></span>`).join('')}</div>
+             <div class="muted">${s.serials.length} of ${fmt(l.qty)} scanned</div>`
+          : `<input id="lq_${i}" type="number" min="0" step="any" value="${s.qty ?? ''}" data-lload="${i}" style="width:100px;text-align:right">`;
+        return `<tr><td>${esc(l.itemCode)}<div class="muted">${esc(it.name)}</div></td><td class="num">${fmt(l.qty)} ${esc(it.unit)}</td><td class="num">${fmt(qtyAt(l.itemCode, LS.loc))}</td><td>${input}</td></tr>`;
+      }).join('');
+      loadHTML = `<div class="card"><h2>Load the truck</h2>
+        <div class="toolbar">Warehouse: ${pendingLocs.length > 1 ? `<select id="ldLoc">${pendingLocs.map(x => `<option value="${esc(x)}" ${x===LS.loc ? 'selected' : ''}>${esc(locName(x))}</option>`).join('')}</select>` : `<b>${esc(locName(LS.loc))}</b>`}</div>
+        <div class="scanbox"><span>▦</span><input class="scan" id="ldScan" placeholder="Scan an item barcode to jump to its line" autocomplete="off"></div><div class="msg" id="ldScanMsg"></div>
+        <div class="scroll"><table><thead><tr><th>Item</th><th class="num">Requested</th><th class="num">On shelf</th><th>Loaded on truck</th></tr></thead><tbody>${rowsL}</tbody></table></div>
+        <p class="hint">Enter what actually goes on the truck. Less than requested is recorded as short. Posting takes the items out of stock.</p>
+        <button class="btn" data-act="postload">Post loaded items from ${esc(locName(LS.loc))}</button><div class="msg" id="loadMsg"></div></div>`;
+    }
+  }
+  // dispatch
+  let dispHTML = '';
+  if (d.status==='requested' && lines.length && lines.every(l => l.posted) && (canPost || canDisp)){
+    dispHTML = `<div class="card"><h2>Truck check-out and dispatch</h2>
+      ${!d.vehicleId || !d.driverId ? `<div class="info warn">${canDisp ? 'Choose the truck and driver above first.' : 'The dispatcher still needs to assign the truck and driver.'}</div>` : ''}
+      <p class="hint" style="margin-top:0">Check the truck with the driver before it leaves. Untick anything that is not OK and describe it in Notes.</p>
+      ${checkFormHTML('co')}<button class="btn" data-act="dispatch">Dispatch</button><div class="msg" id="dispMsg"></div></div>`;
+  }
+  // on the road / done
+  let roadHTML = '';
+  if (['dispatched','completed'].includes(d.status)){
+    const deliv = d.deliveredAt
+      ? `<p>Delivered ${esc(d.deliveredDate||'')} · received by <b>${esc(d.receivedBy)}</b> · ${d.drSigned ? 'signed DR returned' : '<span class="neg">signed DR not yet returned</span>'}${d.deliveryNote ? ' · ' + esc(d.deliveryNote) : ''}</p>
+         ${canDisp && !d.drSigned ? '<button class="btn ghost small" data-act="drsigned">Signed DR received</button>' : ''}`
+      : canDisp ? `<div class="row3"><div><label for="dvRecv">Received by</label><input id="dvRecv" placeholder="Name of person who received"></div>
+            <div><label for="dvRecvDate">Date received</label><input id="dvRecvDate" type="date" value="${today()}"></div>
+            <div><label for="dvRecvNote">Note (damage, missing items)</label><input id="dvRecvNote"></div></div>
+          <label class="chk" style="margin-top:10px"><input type="checkbox" id="dvSigned"> Signed DR is back with us</label>
+          <button class="btn" data-act="delivered">Mark delivered</button><div class="msg" id="dvMsg"></div>`
+      : '<p class="muted">Waiting for the dispatcher to confirm delivery.</p>';
+    const ri = returnIssues(d), km = d.checkIn?.odo != null && d.checkOut?.odo != null ? d.checkIn.odo - d.checkOut.odo : null;
+    const truck = d.checkIn
+      ? `<p>Back: ${checkSummary(d.checkIn)}</p>${km != null ? `<p class="muted">${fmt(km)} km driven</p>` : ''}
+         ${ri.length ? `<div class="info warn">New issues since check-out: ${ri.map(esc).join(', ')}. Driver: ${esc(crewName(d.driverId))}.</div>` : ''}`
+      : `<p class="hint" style="margin-top:0">When the truck returns, check it again. Anything that was OK at check-out and is not OK now is flagged against this trip.</p>
+         ${checkFormHTML('ci')}<button class="btn" data-act="back">Truck is back</button><div class="msg" id="backMsg"></div>`;
+    roadHTML = `<div class="card"><h2>Delivery</h2>${deliv}</div>
+      <div class="card"><h2>Truck</h2><p>Out: ${checkSummary(d.checkOut)}</p>${truck}</div>`;
+  }
+  box.innerHTML = `
+    <div class="card">
+      <div class="toolbar">${back}<span style="flex:1"></span>${acts.join(' ')}</div>
+      <h2>${esc(d.code)} ${pill(DSTAT, st)}</h2>
+      ${origin ? '<p class="muted" style="margin:0 0 8px">' + origin + '</p>' : ''}
+      ${head}
+    </div>
+    <div class="card">
+      <h2>Items</h2>
+      <div class="scroll"><table><thead><tr><th>Item</th><th class="num">Qty</th><th>From</th><th>Status</th><th></th></tr></thead>
+        <tbody>${lineRows || '<tr><td colspan="5" class="muted">No items yet.</td></tr>'}</tbody></table></div>
+      ${overs.length ? `<div class="info warn">Not enough free stock: ${overs.map(([c, q]) => `${esc(c)} ${fmt(q)} requested, ${fmt(Math.max(0, freeFor(c)))} free`).join('; ')}. The warehouse will load what it has and the rest is recorded as short.</div>` : ''}
+      ${addRow}
+    </div>
+    ${loadHTML}${dispHTML}${roadHTML}`;
+  // wiring
+  const on = (sel, ev, fn) => box.querySelectorAll(sel).forEach(el => el.addEventListener(ev, fn));
+  const upd = data => saveDel(d.id, data).catch(e => alertMsg(friendly(e)));
+  const mut = fn => { delForceNext = true; mutateLines(d.id, fn).catch(e => alertMsg(friendly(e))); };
+  on('#dvDest', 'change', e => upd({destination: e.target.value.trim()}));
+  on('#dvProj', 'change', e => { const pid = e.target.value || null, data = {projectId: pid};
+    if (pid && !$('#dvDest').value.trim()){ const p = S.projects[pid]; data.destination = p.name + (p.client ? ' · ' + p.client : ''); }
+    delForceNext = true; upd(data); });
+  on('#dvDate', 'change', e => upd({neededDate: e.target.value}));
+  on('#dvVeh', 'change', e => { delForceNext = true; upd({vehicleId: e.target.value || null}); });
+  on('#dvDrv', 'change', e => { delForceNext = true; upd({driverId: e.target.value || null}); });
+  on('[data-helper]', 'change', () => upd({helperIds: [...box.querySelectorAll('[data-helper]:checked')].map(x => x.dataset.helper)}));
+  on('#dvNotes', 'change', e => upd({notes: e.target.value.trim()}));
+  on('[data-lqty]', 'change', e => { const i = +e.target.dataset.lqty, v = +e.target.value; if (v > 0) mut(ls => { ls[i].qty = v; return ls; }); });
+  on('[data-lloc]', 'change', e => { const i = +e.target.dataset.lloc, v = e.target.value; mut(ls => { ls[i].loc = v; return ls; }); });
+  on('[data-lrm]', 'click', e => { const i = +e.currentTarget.dataset.lrm; mut(ls => ls.filter((_, j) => j !== i)); });
+  on('#dvScan', 'keydown', e => { if (e.key !== 'Enter') return; e.preventDefault();
+    const c = e.target.value.trim().toUpperCase(); e.target.value = ''; if (!c) return;
+    if (!item(c)){ alertMsg(`No item with code "${c}".`); return; }
+    $('#dvItem').value = c; $('#dvQty').focus(); });
+  on('#dvQty', 'keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); addDelLine(d.id); } });
+  on('[data-act]', 'click', e => delAction(d.id, e.currentTarget.dataset.act));
+  on('#ldLoc', 'change', e => { LOAD[d.id].loc = e.target.value; renderDeliveryDetail(true); });
+  on('[data-lload]', 'input', e => { LOAD[d.id].lines[+e.target.dataset.lload].qty = e.target.value; });
+  on('[data-lser]', 'keydown', e => { if (e.key !== 'Enter') return; e.preventDefault();
+    const i = +e.target.dataset.lser, sn = e.target.value.trim(), s = LOAD[d.id].lines[i], m = $('#loadMsg');
+    e.target.value = ''; if (!sn) return;
+    if (s.serials.includes(sn)){ m.className = 'msg err'; m.textContent = `${sn} is already scanned.`; return; }
+    if (s.serials.length >= d.lines[i].qty){ m.className = 'msg err'; m.textContent = 'All units for this line are already scanned.'; return; }
+    s.serials.push(sn); delRefocus = 'ls_' + i; renderDeliveryDetail(true); });
+  on('[data-lsrm]', 'click', e => { const [i, k] = e.currentTarget.dataset.lsrm.split(':').map(Number); LOAD[d.id].lines[i].serials.splice(k, 1); renderDeliveryDetail(true); });
+  on('#ldScan', 'keydown', e => { if (e.key !== 'Enter') return; e.preventDefault();
+    const c = e.target.value.trim().toUpperCase(), m = $('#ldScanMsg'); e.target.value = '';
+    const i = d.lines.findIndex(l => !l.posted && l.loc === LOAD[d.id].loc && l.itemCode === c);
+    if (i < 0){ m.className = 'msg err'; m.textContent = `${c} is not on this list for ${locName(LOAD[d.id].loc)}.`; return; }
+    m.className = 'msg ok'; m.textContent = `${c} — ${item(c)?.name || ''}`;
+    const el = document.getElementById('ls_' + i) || document.getElementById('lq_' + i); el.focus(); el.select?.(); });
+  if (delRefocus){ const el = document.getElementById(delRefocus); if (el) el.focus(); delRefocus = null; }
+}
+$('#delDetail').addEventListener('focusout', () => setTimeout(() => { if (openDelId && !$('#delDetail').contains(document.activeElement)) renderDeliveryDetail(); }, 0));
+
+async function delAction(did, act){
+  const d = getDel(did);
+  const where = {dispatch:'#dispMsg', delivered:'#dvMsg', back:'#backMsg'}[act];
+  try {
+    if (act==='addline') return addDelLine(did);
+    if (act==='picklist') return printPickList(d);
+    if (act==='packlist') return printPackingList(d);
+    if (act==='postload') return postLoaded(did);
+    if (act==='backorder') return await makeBackorder(d);
+    if (act==='delete') return dialogForm(`Delete draft ${esc(d.code)}?`, '<p class="muted">The draft and its item list are removed.</p>', 'Delete draft',
+      async () => { await db.doc('deliveries/'+did).delete(); closeDelivery(); });
+    if (act==='cancel') return dialogForm(`Cancel ${esc(d.code)}?`, '<p class="muted">The held stock is released. The delivery stays on record as cancelled.</p>', 'Cancel delivery',
+      async () => { await saveDel(did, {status:'cancelled', cancelledAt: FV().serverTimestamp(), cancelledByName: me.name}); delForceNext = true; });
+    if (act==='submit'){
+      if (!d.destination) throw new Error('Enter the destination first.');
+      if (!(d.lines||[]).length) throw new Error('Add at least one item.');
+      await saveDel(did, {status:'requested', requestedAt: FV().serverTimestamp(), requestedByName: me.name});
+    }
+    if (act==='dispatch'){
+      if (!d.vehicleId || !d.driverId) throw new Error('A truck and driver must be assigned before dispatch.');
+      if (!d.lines.some(l => (l.loadedQty||0) > 0)) throw new Error('Nothing was loaded. Cancel the delivery instead.');
+      await saveDel(did, {status:'dispatched', checkOut: readCheck('co'), dispatchedAt: FV().serverTimestamp(), dispatchedByName: me.name});
+    }
+    if (act==='delivered'){
+      const rb = $('#dvRecv').value.trim();
+      if (!rb) throw new Error('Enter who received the delivery.');
+      await saveDel(did, {deliveredAt: FV().serverTimestamp(), deliveredDate: $('#dvRecvDate').value, receivedBy: rb, drSigned: $('#dvSigned').checked,
+        deliveryNote: $('#dvRecvNote').value.trim(), deliveredByName: me.name, ...(d.checkIn ? {status:'completed'} : {})});
+    }
+    if (act==='drsigned') await saveDel(did, {drSigned: true});
+    if (act==='back') await saveDel(did, {checkIn: readCheck('ci'), returnedAt: FV().serverTimestamp(), returnedByName: me.name, ...(d.deliveredAt ? {status:'completed'} : {})});
+    delForceNext = true; renderDeliveryDetail(true);
+  } catch(err){
+    const m = where && $(where);
+    if (m){ m.className = 'msg err'; m.textContent = friendly(err); } else alertMsg(friendly(err));
+  }
+}
+
+// ---- printed documents
+function docHeader(title, d){
+  const proj = d.projectId ? S.projects[d.projectId] : null, v = S.vehicles[d.vehicleId];
+  const row = (k, val) => val ? `<tr><td>${k}</td><td>${val}</td></tr>` : '';
+  return `<div class="dhead"><div><div style="font-size:9pt;letter-spacing:.06em">PRIME AGRITECH CORPORATION</div><h1>${title}</h1>
+    <table class="meta">${row('Destination', '<b>' + esc(d.destination||'') + '</b>')}${row('Project', proj && esc(proj.code + ' · ' + proj.name))}
+      ${row('Delivery date', esc(d.neededDate||''))}${row('Dispatched', d.dispatchedAt?.toDate ? esc(d.dispatchedAt.toDate().toLocaleString('en-PH')) : '')}
+      ${row('Truck', v && esc(v.name + ' (' + v.type + ')'))}${row('Driver', esc(crewName(d.driverId)))}${row('Pahinante', (d.helperIds||[]).map(crewName).map(esc).join(', '))}</table></div>
+    <div class="dbar">${barcodeSVG(d.code)}<div style="text-align:center"><b>${esc(d.code)}</b></div></div></div>`;
+}
+function printDoc(html){
+  const pa = $('#printArea'); pa.className = 'doc'; pa.innerHTML = html;
+  $('#pageRule').textContent = '@page{size:A4;margin:12mm}';
+  window.print();
+}
+function printPickList(d){
+  const groups = {}; (d.lines||[]).forEach(l => { if (!l.posted) (groups[l.loc] ||= []).push(l); });
+  printDoc(docHeader('PICK LIST', d) + Object.entries(groups).map(([loc, ls]) => `<h2>${esc(locName(loc))}</h2>
+    <table><thead><tr><th>Code</th><th>Description</th><th>Qty</th><th>Unit</th><th>Picked</th><th>Serial numbers</th></tr></thead>
+    <tbody>${ls.map(l => { const it = item(l.itemCode) || {}; return `<tr><td>${esc(l.itemCode)}</td><td>${esc(it.name)}</td><td>${fmt(l.qty)}</td><td>${esc(it.unit)}</td><td>☐</td><td>${it.serialized ? '' : '—'}</td></tr>`; }).join('')}</tbody></table>`).join('')
+    + (d.notes ? `<p>Notes: ${esc(d.notes)}</p>` : '') + '<div class="sig"><div>Picked by</div><div>Checked by</div><div>Date</div></div>');
+}
+function printPackingList(d){
+  const loaded = (d.lines||[]).filter(l => (l.loadedQty||0) > 0), short = (d.lines||[]).filter(l => l.posted && (l.loadedQty||0) < l.qty);
+  printDoc(docHeader('PACKING LIST / DELIVERY RECEIPT', d)
+    + `<table><thead><tr><th>#</th><th>Code</th><th>Description</th><th>Qty</th><th>Unit</th><th>Serial numbers</th></tr></thead>
+       <tbody>${loaded.map((l, n) => { const it = item(l.itemCode) || {}; return `<tr><td>${n+1}</td><td>${esc(l.itemCode)}</td><td>${esc(it.name)}</td><td>${fmt(l.loadedQty)}</td><td>${esc(it.unit)}</td><td>${(l.serials||[]).map(esc).join(', ')}</td></tr>`; }).join('')}</tbody></table>`
+    + (short.length ? `<p><b>Short, to follow:</b> ${short.map(l => `${esc(l.itemCode)} ${fmt(l.qty - (l.loadedQty||0))} ${esc(item(l.itemCode)?.unit || '')}`).join('; ')}${d.backorderCode ? ' (backorder ' + esc(d.backorderCode) + ')' : ''}</p>` : '')
+    + (d.notes ? `<p>Notes: ${esc(d.notes)}</p>` : '')
+    + '<p style="font-size:9pt">Received the above items in good order and condition, except as noted below.</p><p>Remarks: ________________________________________________________________</p>'
+    + '<div class="sig"><div>Released by (warehouse)</div><div>Driver</div><div>Received by: name, signature, date</div></div>');
+}
+
+// ---- where is it
+function whereIs(code){
+  const i = item(code); if (!i) return;
+  const rows = allLocs().map(l => ({l, q: qtyAt(code, l.id), h: heldAt(code, l.id)})).filter(r => Math.abs(r.q) > 1e-9 || r.h);
+  const projs = openProjects().map(p => ({p, r: reservedFor(p, code)})).filter(x => x.r > 0);
+  const dels = heldLines().filter(l => l.itemCode===code && lineHeld(l) > 0);
+  dialogForm(`${esc(i.id)} — ${esc(i.name)}`,
+    `<div class="scroll"><table><thead><tr><th>Location</th><th class="num">On shelf</th><th class="num">Held</th><th class="num">Free there</th></tr></thead>
+      <tbody>${rows.map(r => `<tr><td>${esc(r.l.name)}</td><td class="num">${fmt(r.q)}</td><td class="num">${r.h ? fmt(r.h) : '—'}</td><td class="num"><b>${r.l.kind==='faulty' ? '—' : fmt(r.q - r.h)}</b></td></tr>`).join('')
+        || '<tr><td colspan="4" class="muted">Not in stock anywhere.</td></tr>'}</tbody></table></div>
+     ${dels.length ? `<p class="hint">Held for deliveries: ${dels.map(l => `${esc(l.code)} ${fmt(lineHeld(l))} at ${esc(locName(l.loc))}`).join(', ')}</p>` : ''}
+     ${projs.length ? `<p class="hint">Reserved for projects: ${projs.map(x => `${esc(x.p.code)} ${fmt(x.r)}`).join(', ')}</p>` : ''}
+     <p><b>Free to promise: ${fmt(available(code))} ${esc(i.unit)}</b></p>`, 'Close', async () => {});
+}
+
+// ---- fleet
+function renderFleet(){
+  if (!canDisp) return;
+  const vs = Object.values(S.vehicles).sort((a,b) => a.name.localeCompare(b.name));
+  const active = x => x.active !== false ? '<span class="pill p-green">Active</span>' : '<span class="pill p-gray">Off</span>';
+  $('#vehBody').innerHTML = vs.map(v => `<tr><td>${esc(v.name)}</td><td>${esc(v.type)}</td><td>${active(v)}</td>
+    <td style="white-space:nowrap"><button class="btn ghost small" data-vtrips="${esc(v.id)}">Trips</button> <button class="btn ghost small" data-vtog="${esc(v.id)}">${v.active !== false ? 'Turn off' : 'Turn on'}</button></td></tr>`).join('')
+    || '<tr><td colspan="4" class="muted">No vehicles yet.</td></tr>';
+  const cs = Object.values(S.crew).sort((a,b) => a.role.localeCompare(b.role) || a.name.localeCompare(b.name));
+  $('#crewBody').innerHTML = cs.map(c => `<tr><td>${esc(c.name)}</td><td>${c.role==='driver' ? 'Driver' : 'Pahinante'}</td><td>${active(c)}</td>
+    <td style="white-space:nowrap">${c.role==='driver' ? `<button class="btn ghost small" data-ctrips="${esc(c.id)}">Trips</button> ` : ''}<button class="btn ghost small" data-ctog="${esc(c.id)}">${c.active !== false ? 'Turn off' : 'Turn on'}</button></td></tr>`).join('')
+    || '<tr><td colspan="4" class="muted">No drivers or pahinante yet.</td></tr>';
+  $$('#vehBody [data-vtrips]').forEach(b => b.onclick = () => showTrips('v', b.dataset.vtrips));
+  $$('#crewBody [data-ctrips]').forEach(b => b.onclick = () => showTrips('c', b.dataset.ctrips));
+  $$('#vehBody [data-vtog]').forEach(b => b.onclick = () => db.doc('vehicles/'+b.dataset.vtog).update({active: S.vehicles[b.dataset.vtog].active === false}).catch(e => alertMsg(friendly(e))));
+  $$('#crewBody [data-ctog]').forEach(b => b.onclick = () => db.doc('crew/'+b.dataset.ctog).update({active: S.crew[b.dataset.ctog].active === false}).catch(e => alertMsg(friendly(e))));
+}
+$('#fVeh').addEventListener('submit', async e => {
+  e.preventDefault(); const n = $('#vehName').value.trim(); if (!n) return;
+  if (Object.values(S.vehicles).some(v => v.name.toLowerCase() === n.toLowerCase())){ alertMsg('That vehicle is already listed.'); return; }
+  try { await db.collection('vehicles').add({name: n, type: $('#vehType').value, active: true}); e.target.reset(); } catch(err){ alertMsg(friendly(err)); }
+});
+$('#fCrew').addEventListener('submit', async e => {
+  e.preventDefault(); const n = $('#crewName').value.trim(); if (!n) return;
+  if (Object.values(S.crew).some(c => c.name.toLowerCase() === n.toLowerCase())){ alertMsg('That person is already listed.'); return; }
+  try { await db.collection('crew').add({name: n, role: $('#crewRole').value, active: true}); e.target.reset(); } catch(err){ alertMsg(friendly(err)); }
+});
+
 // ------------------------------------------------------------ dialog + helpers
 function dialogForm(title, body, okLabel, onOk){
   const d = $('#dlg'), f = $('#dlgForm');
@@ -1210,6 +1771,7 @@ function showTab(t){
   $$('section.tab').forEach(s => s.classList.toggle('active', s.id === t));
   if (t==='history') loadHistory();
   if (t==='projects' && !openProjectId) closeProject();
+  if (t==='deliveries' && !openDelId) closeDelivery();
   const sc = document.querySelector(`#${t} .scan`); if (sc) sc.focus();
 }
 
