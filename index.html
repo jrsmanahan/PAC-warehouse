@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prime Warehouse</title>
+
+<!-- ============================================================
+     FIREBASE CONFIG — paste your project's values here.
+     Firebase console → Project settings → Your apps → Web app → Config
+     ============================================================ -->
+<script>
+window.WH_FIREBASE_CONFIG = {
+  apiKey: "PASTE_API_KEY",
+  authDomain: "PASTE_PROJECT_ID.firebaseapp.com",
+  projectId: "PASTE_PROJECT_ID",
+  storageBucket: "PASTE_PROJECT_ID.appspot.com",
+  messagingSenderId: "PASTE_SENDER_ID",
+  appId: "PASTE_APP_ID"
+};
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+  :root{
+    --bg:#f4f5f2; --card:#ffffff; --ink:#1c2420; --muted:#66706a; --line:#e0e4de;
+    --accent:#2f6b4f; --accent-ink:#ffffff; --accent-soft:#e3eee7;
+    --blue:#2f6690; --blue-soft:#e3edf5; --amber:#a86b12; --amber-soft:#faf0dc;
+    --red:#b04a2f; --red-soft:#f7e5df; --gray-soft:#eceeea;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#131815; --card:#1b211d; --ink:#e6ebe7; --muted:#9aa59f; --line:#2c342f;
+      --accent:#6cc295; --accent-ink:#0e1411; --accent-soft:#1f3328; --blue:#7fb3d6; --blue-soft:#1c2a35;
+      --amber:#e2a94a; --amber-soft:#33291a; --red:#e58a6f; --red-soft:#3a221c; --gray-soft:#242b26; }
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{padding:12px 16px;border-bottom:1px solid var(--line);background:var(--card);display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+  header h1{margin:0;font-size:17px}
+  .who{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--muted)}
+  nav{display:flex;gap:4px;padding:8px 16px;overflow-x:auto;background:var(--card);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+  nav button{background:none;border:0;padding:8px 12px;border-radius:8px;color:var(--muted);font:inherit;cursor:pointer;white-space:nowrap;position:relative}
+  nav button.active{background:var(--accent);color:var(--accent-ink)}
+  nav .badge{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;line-height:18px;text-align:center}
+  main{max-width:1000px;margin:0 auto;padding:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+  h2{margin:0 0 12px;font-size:16px}
+  h3{margin:16px 0 8px;font-size:14px}
+  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+  input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+  input:disabled,select:disabled{opacity:.6}
+  input[type=checkbox]{width:auto}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  @media (max-width:620px){.row,.row3{grid-template-columns:1fr}}
+  .btn{margin-top:14px;padding:10px 16px;border:0;border-radius:8px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:600;cursor:pointer}
+  .btn:disabled{opacity:.5;cursor:wait}
+  .btn.ghost{background:none;border:1px solid var(--line);color:var(--ink);font-weight:500}
+  .btn.danger{background:var(--red);color:#fff}
+  .btn.small{margin:0;padding:6px 10px;font-size:13px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.03em;white-space:nowrap}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  tr.low td{background:var(--amber-soft)}
+  tr.click{cursor:pointer} tr.click:hover td{background:var(--gray-soft)}
+  .pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap}
+  .p-green{background:var(--accent-soft);color:var(--accent)} .p-blue{background:var(--blue-soft);color:var(--blue)}
+  .p-amber{background:var(--amber-soft);color:var(--amber)} .p-red{background:var(--red-soft);color:var(--red)} .p-gray{background:var(--gray-soft);color:var(--muted)}
+  .pos{color:var(--accent)} .neg{color:var(--red)}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+  .toolbar input,.toolbar select{width:auto;flex:1;min-width:140px}
+  .toolbar input[type=checkbox]{flex:none;min-width:0}
+  .msg{margin-top:10px;font-size:14px;min-height:20px}
+  .msg.err{color:var(--red)} .msg.ok{color:var(--accent)}
+  .muted{color:var(--muted);font-size:13px}
+  .hint{font-size:13px;color:var(--muted);margin:6px 0 0}
+  .scroll{overflow-x:auto}
+  section.tab{display:none} section.tab.active{display:block}
+  .scanbox{display:flex;gap:8px;align-items:center;padding:8px 10px;border:2px dashed var(--accent);border-radius:10px}
+  .scanbox input{border:0;background:none;font-size:16px;padding:6px 4px}
+  .scanbox input:focus{outline:none}
+  .scanbox.serial{border-color:var(--blue)}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .chip{display:inline-flex;gap:6px;align-items:center;padding:3px 4px 3px 10px;border-radius:99px;background:var(--blue-soft);color:var(--blue);font-size:13px;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .chip button{border:0;background:none;color:inherit;cursor:pointer;font-size:15px;line-height:1;padding:0 6px}
+  .info{padding:10px 12px;border-radius:8px;background:var(--gray-soft);font-size:14px;margin-top:10px}
+  .info.warn{background:var(--amber-soft);color:var(--amber)}
+  .kpis{display:flex;flex-wrap:wrap;gap:24px;margin-bottom:12px}
+  .kpis div b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+  .kpis div span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+  dialog{border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink);padding:18px;width:min(460px,92vw)}
+  dialog::backdrop{background:rgba(0,0,0,.35)}
+  .login{max-width:380px;margin:8vh auto;padding:0 16px}
+  .login h1{font-size:22px;margin:0 0 4px}
+  #app{display:none}
+  .flash{animation:flash .6s} @keyframes flash{from{background:var(--amber-soft)}to{background:transparent}}
+  /* labels */
+  #labelPreview{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+  .label{background:#fff;color:#000;border:1px solid #ccc;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5mm 2mm;overflow:hidden;font-family:Arial,Helvetica,sans-serif}
+  .label .ln{font-size:9pt;font-weight:bold;width:100%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
+  .label svg{width:100%;flex:1;min-height:0;margin:1mm 0 .5mm}
+  .label .lc{font-size:9pt;letter-spacing:.08em;line-height:1.1}
+  .sz-50x25 .label{width:50mm;height:25mm} .sz-40x30 .label{width:40mm;height:30mm}
+  .sz-a4 .label{width:63.5mm;height:33.9mm;padding:3mm 4mm}
+  #printArea{display:none}
+  @media print{
+    body{background:#fff}
+    body > *:not(#printArea){display:none !important}
+    #printArea{display:block}
+    #printArea .label{border:0;break-inside:avoid}
+    #printArea.sz-50x25 .label,#printArea.sz-40x30 .label{break-after:page}
+    #printArea.sz-a4{display:grid;grid-template-columns:repeat(3,63.5mm);grid-auto-rows:33.9mm;column-gap:2.5mm;justify-content:center}
+  }
+</style>
+<style id="pageRule"></style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="loginView" class="login" hidden>
+  <h1>Prime Warehouse</h1>
+  <p class="muted">Sign in with the username and password your manager gave you.</p>
+  <form id="loginForm">
+    <label for="lUser">Username</label><input id="lUser" autocomplete="username" required>
+    <label for="lPass">Password</label><input id="lPass" type="password" autocomplete="current-password" required>
+    <button class="btn" style="width:100%">Sign in</button>
+    <div class="msg" id="loginMsg"></div>
+  </form>
+  <div id="setupBox" hidden class="card" style="margin-top:20px">
+    <h2>First-time setup</h2>
+    <p class="muted" style="margin-top:0">No accounts exist yet. Create the first manager account. This option disappears once it's done.</p>
+    <form id="setupForm">
+      <label for="sName">Your name</label><input id="sName" required>
+      <label for="sUser">Username</label><input id="sUser" required placeholder="e.g. jacinto">
+      <label for="sPass">Password (at least 6 characters)</label><input id="sPass" type="password" minlength="6" required>
+      <button class="btn">Create manager account</button>
+      <div class="msg" id="setupMsg"></div>
+    </form>
+  </div>
+</div>
+<div id="blockedView" class="login" hidden>
+  <h1>No access</h1>
+  <p id="blockedMsg" class="muted"></p>
+  <button class="btn ghost" onclick="auth.signOut()">Sign out</button>
+</div>
+<div id="configView" class="login" hidden>
+  <h1>Firebase not set up</h1>
+  <p class="muted">Open this file in GitHub and paste your Firebase config into the block near the top marked FIREBASE CONFIG.</p>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app">
+<header>
+  <h1>Prime Warehouse</h1>
+  <div class="who"><span id="whoName"></span><span id="whoRole" class="pill p-gray"></span><button class="btn ghost small" onclick="auth.signOut()">Sign out</button></div>
+</header>
+<nav id="tabs">
+  <button data-tab="stock" class="active">Stock</button>
+  <button data-tab="receive">Receive</button>
+  <button data-tab="issue">Issue</button>
+  <button data-tab="adjust">Adjust</button>
+  <button data-tab="transfer">Transfer</button>
+  <button data-tab="projects">Projects</button>
+  <button data-tab="warranty">Warranty</button>
+  <button data-tab="history">History</button>
+  <button data-tab="labels">Labels</button>
+  <button data-tab="approvals" class="mgr">Approvals<span class="badge" id="pendBadge" hidden></span></button>
+  <button data-tab="setup">Setup</button>
+</nav>
+
+<main>
+<!-- STOCK -->
+<section class="tab active" id="stock">
+  <div class="card">
+    <div class="kpis" id="stockKpis"></div>
+    <div class="toolbar">
+      <input id="stockSearch" placeholder="Search or scan item code">
+      <select id="stockLoc"></select>
+      <select id="stockCat"><option value="">All categories</option></select>
+      <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--ink)"><input type="checkbox" id="stockLowOnly"> Low only</label>
+      <button class="btn ghost small" onclick="exportStock()">Export CSV</button>
+    </div>
+    <div class="scroll"><table>
+      <thead><tr><th>Code</th><th>Item</th><th class="num">On hand</th><th class="num">Reserved</th><th class="num">Available</th><th>Unit</th><th class="num">Reorder at</th><th class="num mgrc">Avg cost</th><th class="num mgrc">Value</th></tr></thead>
+      <tbody id="stockBody"></tbody>
+    </table></div>
+    <p class="hint">Reserved = still to be issued to planned and active projects. Available = on hand (outside the faulty area) minus reserved. Low-stock is judged on Available.</p>
+  </div>
+</section>
+
+<!-- RECEIVE -->
+<section class="tab" id="receive">
+  <div class="card">
+    <h2>Receive stock</h2>
+    <form id="fReceive" data-kind="receive"></form>
+  </div>
+</section>
+
+<!-- ISSUE -->
+<section class="tab" id="issue">
+  <div class="card">
+    <h2>Issue stock</h2>
+    <form id="fIssue" data-kind="issue"></form>
+  </div>
+</section>
+
+<!-- ADJUST -->
+<section class="tab" id="adjust">
+  <div class="card">
+    <h2>Adjust stock</h2>
+    <p class="hint" id="adjHint"></p>
+    <form id="fAdjust" data-kind="adjust"></form>
+  </div>
+  <div class="card">
+    <h2>Waiting for approval</h2>
+    <div class="scroll"><table><thead><tr><th>Date</th><th>Item</th><th class="num">Qty</th><th>Reason</th><th>By</th></tr></thead><tbody id="myPending"></tbody></table></div>
+  </div>
+</section>
+
+<!-- TRANSFER -->
+<section class="tab" id="transfer">
+  <div class="card">
+    <h2>Transfer between locations</h2>
+    <form id="fTransfer" data-kind="transfer"></form>
+  </div>
+</section>
+
+<!-- PROJECTS -->
+<section class="tab" id="projects">
+  <div id="projList">
+    <div class="card mgr">
+      <h2>New project</h2>
+      <form id="fProject">
+        <div class="row3">
+          <div><label for="pName">Project / farm name</label><input id="pName" required placeholder="e.g. Santos Breeder Farm, Bldg 3"></div>
+          <div><label for="pClient">Client</label><input id="pClient"></div>
+          <div><label for="pStatus">Status</label><select id="pStatus"><option value="planned">Planned</option><option value="active">Active</option></select></div>
+        </div>
+        <button class="btn">Create project</button>
+        <div class="msg" id="projMsg"></div>
+      </form>
+    </div>
+    <div class="card">
+      <div class="toolbar"><h2 style="margin:0;flex:1">Projects</h2>
+        <select id="projFilter"><option value="open">Planned &amp; active</option><option value="">All</option><option value="closed">Closed</option></select></div>
+      <div class="scroll"><table><thead><tr><th>Code</th><th>Project</th><th>Client</th><th>Status</th><th class="num">Lines</th><th class="num">Issued</th><th class="num">Short now</th><th class="num mgrc">Material cost</th></tr></thead><tbody id="projBody"></tbody></table></div>
+    </div>
+  </div>
+  <div id="projDetail" hidden></div>
+</section>
+
+<!-- WARRANTY -->
+<section class="tab" id="warranty">
+  <div class="card">
+    <h2>Log a faulty unit</h2>
+    <p class="hint" style="margin-top:0">For serial-tracked equipment. The unit moves to the Faulty / Warranty area and stops counting as available stock.</p>
+    <form id="fFaulty">
+      <div class="row">
+        <div><label for="fyWhere">Where is the faulty unit?</label>
+          <select id="fyWhere"><option value="site">Came back from a farm / site</option><option value="wh">Found faulty in the warehouse</option></select></div>
+        <div><label for="fySerial">Serial number (scan or type, then Enter)</label><input id="fySerial" autocomplete="off"></div>
+      </div>
+      <div class="info" id="fyInfo">Scan the unit's serial number.</div>
+      <label for="fyNote">What is wrong with it?</label><input id="fyNote" required placeholder="e.g. motor hums, does not start">
+      <label for="fyRef">Reference (service report, return slip)</label><input id="fyRef">
+      <button class="btn">Log faulty unit</button>
+      <div class="msg" id="fyMsg"></div>
+    </form>
+  </div>
+  <div class="card">
+    <h2>Units in warranty process</h2>
+    <div class="scroll"><table><thead><tr><th>Serial</th><th>Item</th><th>Status</th><th>Fault / RMA</th><th>Project</th><th></th></tr></thead><tbody id="wBody"></tbody></table></div>
+  </div>
+  <div class="card">
+    <h2>Look up a serial number</h2>
+    <div class="toolbar"><input id="serLookup" placeholder="Scan or type a serial, then Enter"></div>
+    <div id="serResult"></div>
+  </div>
+</section>
+
+<!-- HISTORY -->
+<section class="tab" id="history">
+  <div class="card">
+    <div class="toolbar">
+      <select id="hItem"></select>
+      <select id="hProject"></select>
+      <select id="hType"><option value="">All types</option><option>IN</option><option>OUT</option><option>ADJUST</option><option>TRANSFER</option></select>
+      <button class="btn ghost small" onclick="loadHistory()">Refresh</button>
+      <button class="btn ghost small" onclick="exportHistory()">Export CSV</button>
+    </div>
+    <div class="scroll"><table>
+      <thead><tr><th>Date</th><th>Type</th><th>Item</th><th>Location</th><th class="num">Qty</th><th>Reason / reference</th><th>By</th><th class="num mgrc">Unit cost</th></tr></thead>
+      <tbody id="hBody"></tbody>
+    </table></div>
+    <p class="muted" id="hNote"></p>
+  </div>
+</section>
+
+<!-- LABELS -->
+<section class="tab" id="labels">
+  <div class="card">
+    <h2>Print barcode labels</h2>
+    <div class="row">
+      <div><label for="labelSize">Label size</label>
+        <select id="labelSize">
+          <option value="50x25">50 × 25 mm (label printer, 1 per label)</option>
+          <option value="40x30">40 × 30 mm (label printer, 1 per label)</option>
+          <option value="a4">A4 sheet, 3 × 8 (63.5 × 33.9 mm stickers)</option>
+        </select></div>
+      <div><label for="allCopies">Copies for every item</label>
+        <div class="toolbar" style="margin:0"><input id="allCopies" type="number" min="0" value="1"><button type="button" class="btn ghost small" onclick="setAllCopies()">Apply to all</button></div></div>
+    </div>
+    <div class="scroll" style="margin-top:12px"><table><thead><tr><th>Code</th><th>Item</th><th class="num">Copies</th></tr></thead><tbody id="labelBody"></tbody></table></div>
+    <button class="btn" onclick="printLabels()">Print labels</button>
+    <p class="hint">In the print dialog, set margins to None and scale to 100%. For a label printer, choose the matching paper size.</p>
+  </div>
+  <div class="card"><h2>Preview</h2><div id="labelPreview"></div><p class="muted" id="labelNote"></p></div>
+</section>
+
+<!-- APPROVALS -->
+<section class="tab" id="approvals">
+  <div class="card">
+    <h2>Adjustments waiting for approval</h2>
+    <div class="scroll"><table><thead><tr><th>Date</th><th>Item</th><th>Location</th><th class="num">Qty</th><th>Reason / note</th><th>By</th><th></th></tr></thead><tbody id="apBody"></tbody></table></div>
+    <div class="msg" id="apMsg"></div>
+  </div>
+</section>
+
+<!-- SETUP -->
+<section class="tab" id="setup">
+  <div class="card">
+    <h2>Add item</h2>
+    <form id="fItem">
+      <div class="row3">
+        <div><label for="iCode">Code</label><input id="iCode" required placeholder="e.g. FAN-50"></div>
+        <div><label for="iName">Name</label><input id="iName" required placeholder="e.g. 50-inch exhaust fan"></div>
+        <div><label for="iUnit">Unit</label><input id="iUnit" required placeholder="pc, bag, m, set"></div>
+      </div>
+      <div class="row3">
+        <div><label for="iCat">Category</label><select id="iCat"><option value="material">Construction material</option><option value="equipment">Equipment</option><option value="spare">Spare part</option><option value="consumable">Consumable</option></select></div>
+        <div><label for="iReorder">Reorder level</label><input id="iReorder" type="number" min="0" step="any" value="0"></div>
+        <div><label for="iSerial" style="visibility:hidden">x</label><label style="margin:8px 0 0;display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="iSerial"> Track serial numbers</label></div>
+      </div>
+      <p class="hint">Codes use letters, numbers, dash, dot or underscore, up to 24 characters. Turn on serial numbers for equipment you need to trace per unit (fans, controllers, motors).</p>
+      <button class="btn">Add item</button>
+      <div class="msg" id="itemMsg"></div>
+    </form>
+  </div>
+  <div class="card">
+    <div class="toolbar"><h2 style="margin:0;flex:1">Items</h2><input id="itemSearch" placeholder="Search"></div>
+    <div class="scroll"><table><thead><tr><th>Code</th><th>Name</th><th>Unit</th><th>Category</th><th>Serials</th><th class="num">Reorder</th><th class="num mgrc">Avg cost</th><th class="mgr"></th></tr></thead><tbody id="itemBody"></tbody></table></div>
+  </div>
+  <div class="card mgr">
+    <h2>Locations</h2>
+    <form id="fLoc" class="toolbar"><input id="locName" required placeholder="New location, e.g. Service Van 1"><button class="btn small">Add location</button></form>
+    <div id="locList" class="chips"></div>
+  </div>
+  <div class="card mgr">
+    <h2>Users</h2>
+    <form id="fUser">
+      <div class="row">
+        <div><label for="uName">Full name</label><input id="uName" required></div>
+        <div><label for="uUser">Username</label><input id="uUser" required placeholder="e.g. mark.warehouse"></div>
+      </div>
+      <div class="row">
+        <div><label for="uPass">Password (at least 6 characters)</label><input id="uPass" type="text" minlength="6" required></div>
+        <div><label for="uRole">Role</label><select id="uRole"><option value="keeper">Warehouse keeper</option><option value="manager">Manager / purchasing</option></select></div>
+      </div>
+      <button class="btn">Create user</button>
+      <div class="msg" id="userMsg"></div>
+    </form>
+    <div class="scroll" style="margin-top:12px"><table><thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th></th></tr></thead><tbody id="userBody"></tbody></table></div>
+    <p class="hint">Forgotten password: turn the old account off and create a new one. Passwords can't be read or reset from here.</p>
+  </div>
+  <div class="card mgr">
+    <h2>Import from Basic Warehouse</h2>
+    <p class="muted" style="margin-top:0">Bring over items and current stock from a backup file of the earlier single-computer app. Stock comes in as "Opening balance". Items that already exist here are skipped.</p>
+    <input type="file" id="importFile" accept=".json">
+    <div id="importPreview"></div>
+  </div>
+</section>
+</main>
+</div>
+
+<dialog id="dlg"><form method="dialog" id="dlgForm"></form></dialog>
+<div id="printArea"></div>
+
+<script>
+// ============================================================ setup
+const CFG = window.WH_FIREBASE_CONFIG;
+const EMAIL_DOMAIN = '@prime-warehouse.app';
+const USE_EMU = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).has('emulator');
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => Number((+n||0).toFixed(3)).toLocaleString('en-PH');
+const peso = n => '₱' + (+n||0).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
+const FV = () => firebase.firestore.FieldValue;
+const serialId = (code, s) => code + '__' + String(s).replace(/[^A-Za-z0-9._-]/g,'_');
+const stockId = (code, loc) => code + '__' + loc;
+const CODE_RE = /^[A-Z0-9][A-Z0-9._-]{0,23}$/;
+
+let auth, db, me = null, isMgr = false;
+const S = { items:{}, stock:{}, locations:{}, projects:{}, serials:{}, users:{}, pending:[], bootstrap:false };
+let unsubs = [], settingUp = false, formsBuilt = false;
+
+if (!CFG || String(CFG.apiKey).startsWith('PASTE')) {
+  if (!USE_EMU) { $('#configView').hidden = false; throw new Error('Firebase config missing'); }
+}
+firebase.initializeApp(USE_EMU ? {apiKey:'demo', projectId:'demo-prime-wh', authDomain:'localhost'} : CFG);
+auth = firebase.auth(); db = firebase.firestore();
+if (USE_EMU){ auth.useEmulator('http://127.0.0.1:9099'); db.useEmulator('127.0.0.1', 8080); }
+
+// ============================================================ reasons
+// from: allowed serial statuses before (null = new serial). to: status after ('keep' = unchanged).
+const REASONS = {
+  RECEIVED:     {type:'IN',  kind:'receive', label:'Received from supplier', from:[null,'closed'], to:'in_stock', cost:true},
+  RETURN_SITE:  {type:'IN',  kind:'receive', label:'Returned from site (unused)', from:['issued'], to:'in_stock', project:'return'},
+  REPAIRED:     {type:'IN',  kind:'receive', label:'Back from supplier (repaired)', from:['at_supplier'], to:'in_stock', serialOnly:true},
+  WARRANTY_REPL:{type:'IN',  kind:'receive', label:'Warranty replacement (no cost)', from:[null,'closed'], to:'in_stock', zeroCost:true},
+  OPENING:      {type:'IN',  kind:'hidden',  label:'Opening balance', from:[null], to:'in_stock'},
+  ISSUE_PROJECT:{type:'OUT', kind:'issue',   label:'Issued to project', from:['in_stock'], to:'issued', project:'issue'},
+  ISSUE_OTHER:  {type:'OUT', kind:'issue',   label:'Issued — sale, service or other', from:['in_stock'], to:'issued'},
+  COUNT_ADD:    {type:'ADJUST', sign:1,  kind:'adjust', label:'Count correction (add)', from:[null,'closed'], to:'in_stock'},
+  COUNT_SUB:    {type:'ADJUST', sign:-1, kind:'adjust', label:'Count correction (subtract)', from:['in_stock','faulty'], to:'written_off'},
+  DAMAGED:      {type:'ADJUST', sign:-1, kind:'adjust', label:'Damaged / lost', from:['in_stock','faulty'], to:'written_off'},
+  TRANSFER:     {type:'TRANSFER', kind:'transfer', label:'Transfer', from:['in_stock','faulty'], to:'keep'},
+  FAULTY_SITE:  {type:'IN',  kind:'warranty', label:'Faulty unit from site', from:['issued'], to:'faulty', project:'return', fixedLoc:'FAULTY'},
+  FAULTY_FOUND: {type:'TRANSFER', kind:'warranty', label:'Found faulty in warehouse', from:['in_stock'], to:'faulty', fixedTo:'FAULTY'},
+  TO_SUPPLIER:  {type:'OUT', kind:'warranty', label:'Sent to supplier (warranty)', from:['faulty'], to:'at_supplier', fixedLoc:'FAULTY'},
+};
+const SERIAL_STATUS = { in_stock:['In stock','p-green'], issued:['Issued','p-blue'], faulty:['Faulty','p-red'], at_supplier:['At supplier','p-amber'], written_off:['Written off','p-gray'], closed:['Closed','p-gray'] };
+const PROJ_STATUS = { planned:['Planned','p-gray'], active:['Active','p-blue'], closed:['Closed','p-green'] };
+
+// ============================================================ auth
+db.doc('meta/bootstrap').get().then(d => { S.bootstrap = d.exists; $('#setupBox').hidden = d.exists; }).catch(()=>{});
+
+$('#loginForm').addEventListener('submit', async e => {
+  e.preventDefault(); const m = $('#loginMsg'); m.className='msg'; m.textContent='Signing in…';
+  try { await auth.signInWithEmailAndPassword(toEmail($('#lUser').value), $('#lPass').value); m.textContent=''; }
+  catch(err){ m.className='msg err'; m.textContent = /user-not-found|wrong-password|invalid/.test(err.code+err.message) ? 'Wrong username or password.' : err.message; }
+});
+function toEmail(u){ return String(u).trim().toLowerCase() + EMAIL_DOMAIN; }
+function validUsername(u){ return /^[a-z0-9._-]{3,30}$/.test(u); }
+
+$('#setupForm').addEventListener('submit', async e => {
+  e.preventDefault(); const m = $('#setupMsg');
+  const u = $('#sUser').value.trim().toLowerCase(), name = $('#sName').value.trim();
+  if (!validUsername(u)){ m.className='msg err'; m.textContent='Username: 3–30 lowercase letters, numbers, dot, dash or underscore.'; return; }
+  m.className='msg'; m.textContent='Creating…'; settingUp = true;
+  try {
+    const cred = await auth.createUserWithEmailAndPassword(toEmail(u), $('#sPass').value);
+    const uid = cred.user.uid, b = db.batch();
+    b.set(db.doc('users/'+uid), {name, username:u, role:'manager', active:true, createdAt:FV().serverTimestamp()});
+    b.set(db.doc('meta/bootstrap'), {by:uid, at:FV().serverTimestamp()});
+    await b.commit();
+    await db.doc('locations/MAIN').set({name:'Main Warehouse', kind:'store'});
+    await db.doc('locations/FAULTY').set({name:'Faulty / Warranty', kind:'faulty'});
+    location.reload();
+  } catch(err){ settingUp = false; m.className='msg err'; m.textContent = err.message; }
+});
+
+auth.onAuthStateChanged(async user => {
+  unsubs.forEach(f => f()); unsubs = [];
+  resetForms();
+  $('#app').style.display='none'; $('#loginView').hidden = true; $('#blockedView').hidden = true;
+  if (settingUp) return;
+  if (!user){ $('#loginView').hidden = false; return; }
+  let d;
+  try { d = await db.doc('users/'+user.uid).get(); } catch(e){ d = null; }
+  if (!d || !d.exists){ showBlocked('This login has no warehouse account. Ask your manager to set you up.'); return; }
+  me = { uid:user.uid, ...d.data() };
+  if (!me.active){ showBlocked('Your account is turned off. Ask your manager.'); return; }
+  isMgr = me.role === 'manager';
+  document.body.classList.toggle('is-mgr', isMgr);
+  $('#whoName').textContent = me.name; $('#whoRole').textContent = isMgr ? 'Manager' : 'Keeper';
+  $$('.mgr, .mgrc').forEach(el => el.hidden = !isMgr);
+  $('#adjHint').textContent = isMgr ? 'As a manager, your adjustments post immediately.' : 'Adjustments go to a manager for approval before stock changes.';
+  $('#app').style.display='block';
+  startListeners();
+  if (!formsBuilt){ buildForms(); formsBuilt = true; }
+});
+function showBlocked(msg){ $('#blockedMsg').textContent = msg; $('#blockedView').hidden = false; }
+
+function startListeners(){
+  const on = (q, fn) => unsubs.push(q.onSnapshot(fn, err => console.error(err)));
+  const toMap = (key) => snap => { S[key] = {}; snap.forEach(d => S[key][d.id] = {id:d.id, ...d.data()}); schedule(); };
+  on(db.collection('items'), toMap('items'));
+  on(db.collection('stock'), toMap('stock'));
+  on(db.collection('locations'), toMap('locations'));
+  on(db.collection('projects'), toMap('projects'));
+  on(db.collection('serials').where('status','in',['in_stock','issued','faulty','at_supplier']), toMap('serials'));
+  on(db.collection('users'), toMap('users'));
+  on(db.collection('movements').where('status','==','pending'), snap => { S.pending = snap.docs.map(d => ({id:d.id, ...d.data()})); schedule(); });
+}
+let rafId = 0;
+function schedule(){ cancelAnimationFrame(rafId); rafId = requestAnimationFrame(renderAll); }
+
+// ============================================================ derived numbers
+const item = code => S.items[code];
+const locName = id => S.locations[id]?.name || id;
+const storeLocs = () => Object.values(S.locations).filter(l => l.kind !== 'faulty').sort((a,b)=> a.id==='MAIN'?-1:b.id==='MAIN'?1:a.name.localeCompare(b.name));
+const allLocs = () => [...storeLocs(), ...Object.values(S.locations).filter(l => l.kind === 'faulty')];
+function qtyAt(code, loc){ return S.stock[stockId(code, loc)]?.qty || 0; }
+function usableOnHand(code){ return Object.values(S.stock).filter(s => s.itemCode===code && S.locations[s.loc]?.kind !== 'faulty').reduce((a,s)=>a+(s.qty||0),0); }
+function openProjects(){ return Object.values(S.projects).filter(p => p.status==='planned' || p.status==='active'); }
+function reservedFor(p, code){ return Math.max(0, (p.bom?.[code]||0) - (p.issued?.[code]||0)); }
+function reserved(code, exceptId){ return openProjects().filter(p => p.id!==exceptId).reduce((a,p)=>a+reservedFor(p,code),0); }
+function available(code){ return usableOnHand(code) - reserved(code); }
+
+// ============================================================ posting engine
+async function post(spec){
+  const R = REASONS[spec.reason], it = item(spec.itemCode);
+  if (!it) throw new Error('Unknown item.');
+  const q = +spec.qty;
+  if (!(q > 0)) throw new Error('Quantity must be more than zero.');
+  if (it.serialized){
+    if ((spec.serials||[]).length !== q) throw new Error('Scan one serial number per unit.');
+  } else if (spec.serials?.length) spec.serials = [];
+  const sign = R.type==='IN' ? 1 : R.type==='OUT' ? -1 : R.type==='ADJUST' ? R.sign : 0;
+  const mv = {
+    type:R.type, reason:spec.reason, reasonLabel:R.label, itemCode:it.id, itemName:it.name, unit:it.unit,
+    loc: R.fixedLoc || spec.loc, toLoc: R.type==='TRANSFER' ? (R.fixedTo || spec.toLoc) : null,
+    qty: R.type==='TRANSFER' ? q : sign*q, serials: spec.serials||[], projectId: spec.projectId||null,
+    ref: spec.ref||'', note: spec.note||'', unitCostIn: (spec.unitCost===''||spec.unitCost==null) ? null : +spec.unitCost,
+    by: me.uid, byName: me.name,
+  };
+  mv.locName = locName(mv.loc); if (mv.toLoc) mv.toLocName = locName(mv.toLoc);
+  if (mv.projectId) mv.projectCode = S.projects[mv.projectId]?.code || '';
+  if (!mv.loc) throw new Error('Choose a location.');
+  if (R.type==='TRANSFER' && mv.loc===mv.toLoc) throw new Error('Choose two different locations.');
+  if (R.type==='ADJUST' && !isMgr){
+    mv.status = 'pending'; mv.at = FV().serverTimestamp();
+    await db.collection('movements').add(mv);
+    return {pending:true};
+  }
+  return applyMovement(mv, null);
+}
+
+// Applies a movement atomically: checks stock and serials, updates totals, cost and project.
+async function applyMovement(mv, existingRef){
+  const R = REASONS[mv.reason];
+  const mref = existingRef || db.collection('movements').doc();
+  return db.runTransaction(async tx => {
+    if (existingRef){
+      const cur = await tx.get(existingRef);
+      if (!cur.exists || cur.data().status !== 'pending') throw new Error('This adjustment was already handled.');
+    }
+    const iref = db.doc('items/'+mv.itemCode), idoc = await tx.get(iref);
+    if (!idoc.exists) throw new Error('Item no longer exists.');
+    const it = idoc.data();
+    const q = Math.abs(mv.qty);
+    const fromRef = db.doc('stock/'+stockId(mv.itemCode, mv.loc)), fromDoc = await tx.get(fromRef);
+    const fromQty = fromDoc.exists ? (fromDoc.data().qty||0) : 0;
+    let toRef = null, toQty = 0;
+    if (mv.type==='TRANSFER'){ toRef = db.doc('stock/'+stockId(mv.itemCode, mv.toLoc)); const t = await tx.get(toRef); toQty = t.exists ? (t.data().qty||0) : 0; }
+    const sRefs = mv.serials.map(s => db.doc('serials/'+serialId(mv.itemCode, s)));
+    const sDocs = [];
+    for (const r of sRefs) sDocs.push(await tx.get(r));
+    // serial checks
+    let projectId = mv.projectId;
+    sDocs.forEach((d, i) => {
+      const cur = d.exists ? d.data() : null, st = cur ? cur.status : null;
+      if (!R.from.includes(st)) throw new Error(`Serial ${mv.serials[i]} is ${st ? SERIAL_STATUS[st][0].toLowerCase() : 'not on record'}, so it can't be used for "${R.label}".`);
+      if (cur && (st==='in_stock'||st==='faulty') && cur.loc !== mv.loc) throw new Error(`Serial ${mv.serials[i]} is at ${locName(cur.loc)}, not ${locName(mv.loc)}.`);
+      if (R.project==='return' && cur?.projectId){
+        if (!projectId) projectId = cur.projectId;
+        else if (projectId !== cur.projectId) throw new Error(`Serial ${mv.serials[i]} was issued to a different project. Return it separately.`);
+      }
+    });
+    const dup = mv.serials.find((s,i) => mv.serials.indexOf(s) !== i);
+    if (dup) throw new Error(`Serial ${dup} is listed twice.`);
+    let pref = null, pdoc = null;
+    if (projectId && R.project){ pref = db.doc('projects/'+projectId); pdoc = await tx.get(pref); if (!pdoc.exists) throw new Error('Project not found.'); }
+    // quantity checks
+    const decreases = mv.type==='OUT' || mv.type==='TRANSFER' || (mv.type==='ADJUST' && mv.qty < 0);
+    if (decreases && q > fromQty + 1e-9) throw new Error(`Not enough stock at ${locName(mv.loc)}. Only ${fmt(fromQty)} ${it.unit} there.`);
+    if (R.project==='return' && pdoc){
+      const iss = pdoc.data().issued?.[mv.itemCode] || 0;
+      if (q > iss + 1e-9) throw new Error(`Only ${fmt(iss)} ${it.unit} of this item were issued to ${pdoc.data().code}.`);
+    }
+    // cost
+    const onHand = it.onHand || 0, avg = it.avgCost || 0;
+    let unitCost = avg, newAvg = avg;
+    if (mv.type==='IN' && (R.cost && mv.unitCostIn != null || R.zeroCost)){
+      unitCost = R.zeroCost ? 0 : mv.unitCostIn;
+      const base = Math.max(onHand, 0);
+      newAvg = base + q > 0 ? (base*avg + q*unitCost) / (base + q) : unitCost;
+    }
+    const delta = mv.type==='TRANSFER' ? 0 : mv.qty;
+    // writes
+    tx.set(fromRef, {itemCode:mv.itemCode, loc:mv.loc, qty: fromQty + (mv.type==='TRANSFER' ? -q : mv.qty)}, {merge:true});
+    if (toRef) tx.set(toRef, {itemCode:mv.itemCode, loc:mv.toLoc, qty: toQty + q}, {merge:true});
+    tx.update(iref, {onHand: onHand + delta, avgCost: Math.round(newAvg*10000)/10000, updatedAt: FV().serverTimestamp()});
+    if (pref){
+      const s = R.project==='issue' ? 1 : -1;
+      tx.update(pref, {['issued.'+mv.itemCode]: FV().increment(s*q), issuedCost: FV().increment(s*q*unitCost), updatedAt: FV().serverTimestamp()});
+    }
+    sDocs.forEach((d, i) => {
+      const cur = d.exists ? d.data() : {};
+      const to = R.to==='keep' ? cur.status : R.to;
+      const loc = (to==='in_stock'||to==='faulty') ? (mv.type==='TRANSFER' ? mv.toLoc : mv.loc) : null;
+      const upd = {itemCode:mv.itemCode, serial:mv.serials[i], status:to, loc, updatedAt:FV().serverTimestamp(), lastMovement:mref.id};
+      if (R.project==='issue') upd.projectId = projectId || null;
+      if (mv.reason==='ISSUE_OTHER') { upd.projectId = null; upd.issuedRef = mv.ref || ''; }
+      if (to==='faulty') { upd.fault = mv.note || ''; upd.faultAt = FV().serverTimestamp(); }
+      if (mv.reason==='TO_SUPPLIER') upd.rma = mv.ref || '';
+      if (to==='in_stock' && R.type==='IN' && mv.reason!=='RETURN_SITE') { upd.fault = FV().delete(); upd.rma = FV().delete(); }
+      tx.set(sRefs[i], upd, {merge:true});
+    });
+    const final = {...mv, projectId: projectId||null, unitCost: Math.round(unitCost*10000)/10000};
+    if (projectId && !final.projectCode) final.projectCode = pdoc?.data().code || S.projects[projectId]?.code || '';
+    if (existingRef) tx.update(existingRef, {status:'posted', unitCost: final.unitCost, approvedBy:me.uid, approvedByName:me.name, approvedAt:FV().serverTimestamp()});
+    else tx.set(mref, {...final, status:'posted', at: FV().serverTimestamp()});
+    return {pending:false, onHandAfter: onHand + delta, locAfter: fromQty + (mv.type==='TRANSFER' ? -q : mv.qty)};
+  });
+}
+
+// ============================================================ stock forms (receive / issue / adjust / transfer)
+const FORM_STATE = {};
+function buildForms(){
+  $$('form[data-kind]').forEach(f => {
+    const kind = f.dataset.kind, id = f.id;
+    FORM_STATE[id] = {serials:[]};
+    const reasons = Object.entries(REASONS).filter(([k,r]) => r.kind===kind);
+    f.innerHTML = `
+      <div class="scanbox"><span>▦</span><input class="scan" placeholder="Scan item barcode or type code, then Enter" autocomplete="off"></div>
+      <div class="msg" data-scanmsg></div>
+      <div class="row">
+        <div><label>Item</label><select name="item"></select></div>
+        <div><label>Reason</label><select name="reason" ${reasons.length<2?'disabled':''}>${reasons.map(([k,r])=>`<option value="${k}">${esc(r.label)}</option>`).join('')}</select></div>
+      </div>
+      <div class="row">
+        <div><label>${kind==='transfer'?'From location':'Location'}</label><select name="loc"></select></div>
+        ${kind==='transfer' ? '<div><label>To location</label><select name="toLoc"></select></div>' : '<div data-proj><label>Project</label><select name="project"></select></div>'}
+      </div>
+      <div data-projinfo></div>
+      <div data-serialbox hidden>
+        <label>Serial numbers — scan each unit</label>
+        <div class="scanbox serial"><span>#</span><input class="serialscan" placeholder="Scan serial number, then Enter" autocomplete="off"></div>
+        <div class="chips" data-chips></div>
+        <p class="hint" data-serialhint></p>
+      </div>
+      <div class="row">
+        <div><label>Quantity</label><input name="qty" type="number" min="0.001" step="any"></div>
+        <div data-cost><label>Unit cost ₱ (optional)</label><input name="cost" type="number" min="0" step="any" placeholder="Leave blank if unknown"></div>
+      </div>
+      <p class="hint" data-avail></p>
+      <label>Reference (DR, PO, request, gate pass no.)</label><input name="ref">
+      <label>Note</label><input name="note">
+      <label data-override hidden style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" name="override"> Issue anyway, even though it uses stock reserved for other projects</label>
+      <button class="btn">Save</button>
+      <div class="msg" data-msg></div>`;
+    f.addEventListener('change', () => refreshForm(f));
+    f.addEventListener('input', e => { if (e.target.name==='qty') refreshForm(f); });
+    f.querySelector('.scan').addEventListener('keydown', e => onItemScan(e, f));
+    f.querySelector('.serialscan').addEventListener('keydown', e => onSerialScan(e, f));
+    f.addEventListener('submit', e => { e.preventDefault(); submitForm(f); });
+  });
+  // warranty form listeners
+  $('#fySerial').addEventListener('keydown', onFaultySerial);
+  $('#fFaulty').addEventListener('submit', submitFaulty);
+  $('#serLookup').addEventListener('keydown', e => { if (e.key==='Enter'){ e.preventDefault(); lookupSerial(e.target.value.trim()); }});
+}
+
+function resetForms(){
+  $$('form[data-kind]').forEach(f => { f.reset(); if (FORM_STATE[f.id]) FORM_STATE[f.id].serials = []; f.querySelectorAll('.msg').forEach(m => { m.textContent=''; m.className='msg'; }); });
+  openProjectId = null; faultyTarget = null; hRows = [];
+  ['#fFaulty','#fItem','#fUser','#fProject'].forEach(s => $(s)?.reset());
+}
+function fillFormSelects(f){
+  const kind = f.dataset.kind;
+  const keep = (sel, html) => { if (!sel) return; const v = sel.value; sel.innerHTML = html; if (v && [...sel.options].some(o=>o.value===v)) sel.value = v; };
+  const items = Object.values(S.items).sort((a,b)=>a.id.localeCompare(b.id));
+  keep(f.item, items.length ? items.map(i=>`<option value="${esc(i.id)}">${esc(i.id)} — ${esc(i.name)}</option>`).join('') : '<option value="">Add items under Setup first</option>');
+  const locs = kind==='transfer' ? allLocs() : storeLocs();
+  keep(f.loc, locs.map(l=>`<option value="${esc(l.id)}">${esc(l.name)}</option>`).join(''));
+  keep(f.toLoc, allLocs().map(l=>`<option value="${esc(l.id)}">${esc(l.name)}</option>`).join(''));
+  const projs = Object.values(S.projects).filter(p => p.status!=='closed').sort((a,b)=>a.code.localeCompare(b.code));
+  keep(f.project, '<option value="">— none —</option>' + projs.map(p=>`<option value="${esc(p.id)}">${esc(p.code)} · ${esc(p.name)}</option>`).join(''));
+}
+
+function refreshForm(f){
+  const R = REASONS[f.reason.value], it = item(f.item.value), st = FORM_STATE[f.id];
+  if (!R) return;
+  const projBox = f.querySelector('[data-proj]');
+  if (projBox) projBox.hidden = !R.project;
+  f.querySelector('[data-cost]').hidden = !R.cost;
+  // serials
+  const ser = !!it?.serialized, sb = f.querySelector('[data-serialbox]');
+  sb.hidden = !ser;
+  f.qty.readOnly = ser;
+  if (!ser && st.serials.length){ st.serials = []; }
+  if (ser) f.qty.value = st.serials.length || '';
+  renderChips(f);
+  const sh = f.querySelector('[data-serialhint]');
+  if (ser){
+    const inHere = Object.values(S.serials).filter(s => s.itemCode===it.id && R.from.includes(s.status) && (!['in_stock','faulty'].includes(s.status) || s.loc===f.loc.value));
+    sh.textContent = R.from.includes(null) ? 'New units: scan the manufacturer serial on each unit.' :
+      inHere.length ? `${inHere.length} unit(s) can be used here, e.g. ${inHere.slice(0,4).map(s=>s.serial).join(', ')}${inHere.length>4?'…':''}` : 'No units in the right status here.';
+  }
+  // availability + project info
+  const av = f.querySelector('[data-avail]'), pi = f.querySelector('[data-projinfo]'), ov = f.querySelector('[data-override]');
+  av.textContent = ''; pi.innerHTML = ''; ov.hidden = true;
+  if (!it) return;
+  const here = qtyAt(it.id, R.fixedLoc || f.loc.value);
+  av.textContent = `At this location: ${fmt(here)} ${it.unit}` + (f.dataset.kind==='issue' ? ` · Available after reservations: ${fmt(available(it.id))} ${it.unit}` : '');
+  const pid = f.project?.value, p = pid && S.projects[pid];
+  if (R.project && p){
+    const planned = p.bom?.[it.id] || 0, issued = p.issued?.[it.id] || 0;
+    pi.innerHTML = `<div class="info">${esc(p.code)}: planned ${fmt(planned)}, issued ${fmt(issued)}, still to issue ${fmt(Math.max(0,planned-issued))} ${esc(it.unit)}${planned? '' : ' · not on this project\'s material list'}</div>`;
+  }
+  if (f.dataset.kind==='issue'){
+    const q = +f.qty.value || 0;
+    const freeForThis = usableOnHand(it.id) - reserved(it.id, R.project ? pid : null);
+    if (q > 0 && q > freeForThis + 1e-9){
+      pi.innerHTML += `<div class="info warn">This would dip into stock reserved for other projects (free for this issue: ${fmt(Math.max(0,freeForThis))} ${esc(it.unit)}).${isMgr ? '' : ' Ask a manager to issue it.'}</div>`;
+      if (isMgr) ov.hidden = false;
+    }
+  }
+}
+
+function renderChips(f){
+  const st = FORM_STATE[f.id];
+  f.querySelector('[data-chips]').innerHTML = st.serials.map((s,i)=>`<span class="chip">${esc(s)}<button type="button" aria-label="Remove ${esc(s)}" data-rm="${i}">×</button></span>`).join('');
+  f.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { st.serials.splice(+b.dataset.rm,1); refreshForm(f); });
+}
+
+function onItemScan(e, f){
+  if (e.key!=='Enter') return; e.preventDefault();
+  const code = e.target.value.trim().toUpperCase(); e.target.value='';
+  const msg = f.querySelector('[data-scanmsg]'); if (!code) return;
+  const it = item(code);
+  if (!it){ msg.className='msg err'; msg.textContent = `No item with code "${code}". Add it under Setup first.`; return; }
+  if (f.item.value !== code) FORM_STATE[f.id].serials = [];
+  f.item.value = code; refreshForm(f);
+  msg.className='msg ok'; msg.textContent = `${it.id} — ${it.name}`;
+  f.item.classList.remove('flash'); void f.item.offsetWidth; f.item.classList.add('flash');
+  (it.serialized ? f.querySelector('.serialscan') : f.qty).focus();
+}
+function onSerialScan(e, f){
+  if (e.key!=='Enter') return; e.preventDefault();
+  const s = e.target.value.trim(); e.target.value=''; if (!s) return;
+  const st = FORM_STATE[f.id], msg = f.querySelector('[data-msg]');
+  if (st.serials.includes(s)){ msg.className='msg err'; msg.textContent = `${s} is already in the list.`; return; }
+  st.serials.push(s); msg.textContent=''; refreshForm(f);
+}
+
+async function submitForm(f){
+  const msg = f.querySelector('[data-msg]'), btn = f.querySelector('button.btn');
+  const R = REASONS[f.reason.value], it = item(f.item.value);
+  msg.className='msg';
+  if (!it){ msg.className='msg err'; msg.textContent='Choose an item.'; return; }
+  if (f.dataset.kind==='issue'){
+    const q = +f.qty.value||0, pid = f.project?.value;
+    if (R.project==='issue' && !pid){ msg.className='msg err'; msg.textContent='Choose the project this is issued to.'; return; }
+    const free = usableOnHand(it.id) - reserved(it.id, R.project ? pid : null);
+    if (q > free + 1e-9 && !(isMgr && f.override.checked)){ msg.className='msg err'; msg.textContent = isMgr ? 'Tick "Issue anyway" to use reserved stock.' : 'This uses stock reserved for other projects. A manager must issue it.'; return; }
+  }
+  btn.disabled = true; msg.textContent = 'Saving…';
+  try {
+    const res = await post({ reason:f.reason.value, itemCode:it.id, loc:f.loc.value, toLoc:f.toLoc?.value,
+      qty: it.serialized ? FORM_STATE[f.id].serials.length : f.qty.value, serials:[...FORM_STATE[f.id].serials],
+      projectId: REASONS[f.reason.value].project ? (f.project?.value||null) : null,
+      ref:f.ref.value.trim(), note:f.note.value.trim(), unitCost: R.cost ? f.cost.value : null });
+    msg.className='msg ok';
+    msg.textContent = res.pending ? 'Sent for manager approval. Stock changes once approved.' : `Saved. ${it.id} at this location: ${fmt(res.locAfter)} ${it.unit}. Total on hand: ${fmt(res.onHandAfter)}.`;
+    FORM_STATE[f.id].serials = []; f.qty.value=''; f.ref.value=''; f.note.value=''; if (f.cost) f.cost.value=''; if (f.override) f.override.checked=false;
+    refreshForm(f); f.querySelector('.scan').focus();
+  } catch(err){ msg.className='msg err'; msg.textContent = friendly(err); }
+  btn.disabled = false;
+}
+function friendly(err){
+  const m = err?.message || String(err);
+  if (/permission|insufficient/i.test(m)) return 'You don\'t have permission to do that. Ask a manager.';
+  if (/offline|unavailable|network/i.test(m)) return 'No connection to the server. Check the internet and try again.';
+  return m;
+}
+
+// ============================================================ renderers
+function renderAll(){
+  if (!me) return;
+  $$('form[data-kind]').forEach(f => { fillFormSelects(f); refreshForm(f); });
+  renderStock(); renderProjects(); renderWarranty(); renderPending(); renderSetup(); renderLabels(); fillHistoryFilters();
+  const n = S.pending.length, b = $('#pendBadge'); b.hidden = !(isMgr && n); b.textContent = n;
+}
+
+function renderStock(){
+  const q = $('#stockSearch').value.trim().toLowerCase(), lf = $('#stockLoc').value, cf = $('#stockCat').value, lowOnly = $('#stockLowOnly').checked;
+  const sl = $('#stockLoc'), sv = sl.value;
+  sl.innerHTML = '<option value="">All locations (totals)</option>' + allLocs().map(l=>`<option value="${esc(l.id)}">${esc(l.name)}</option>`).join('');
+  sl.value = sv;
+  const cs = $('#stockCat'); if (cs.options.length<2) cs.innerHTML += ['material','equipment','spare','consumable'].map(c=>`<option value="${c}">${catName(c)}</option>`).join('');
+  let rows = [], value = 0, low = 0, count = 0;
+  Object.values(S.items).sort((a,b)=>a.id.localeCompare(b.id)).forEach(i => {
+    const oh = lf ? qtyAt(i.id, lf) : usableOnHand(i.id);
+    const res = reserved(i.id), av = usableOnHand(i.id) - res;
+    const isLow = i.reorder > 0 && av <= i.reorder;
+    value += (i.onHand||0) * (i.avgCost||0);
+    if (isLow) low++;
+    if (q && !(i.id+' '+i.name).toLowerCase().includes(q)) return;
+    if (cf && i.category !== cf) return;
+    if (lowOnly && !isLow) return;
+    if (lf && !oh) return;
+    count++;
+    rows.push(`<tr class="${isLow?'low':''}"><td>${esc(i.id)}</td><td>${esc(i.name)}${i.serialized?' <span class="pill p-blue">SN</span>':''}</td>
+      <td class="num"><b>${fmt(oh)}</b></td><td class="num">${lf?'':res?fmt(res):'—'}</td><td class="num">${lf?'':fmt(av)}</td><td>${esc(i.unit)}</td>
+      <td class="num">${i.reorder?fmt(i.reorder):'—'}</td>
+      ${isMgr?`<td class="num">${peso(i.avgCost)}</td><td class="num">${peso(oh*(i.avgCost||0))}</td>`:''}</tr>`);
+  });
+  $('#stockBody').innerHTML = rows.join('') || `<tr><td colspan="9" class="muted">${Object.keys(S.items).length?'Nothing matches.':'No items yet. Add them under Setup.'}</td></tr>`;
+  const faulty = Object.values(S.serials).filter(s=>s.status==='faulty'||s.status==='at_supplier').length;
+  $('#stockKpis').innerHTML = `<div><b>${Object.keys(S.items).length}</b><span>Items</span></div>
+    <div><b class="${low?'neg':''}">${low}</b><span>Low stock</span></div>
+    <div><b>${openProjects().length}</b><span>Open projects</span></div>
+    <div><b>${faulty}</b><span>Units in warranty</span></div>
+    ${isMgr?`<div><b>${peso(value)}</b><span>Inventory value</span></div>`:''}
+    ${isMgr && S.pending.length?`<div><b class="neg">${S.pending.length}</b><span>Awaiting approval</span></div>`:''}`;
+}
+['#stockSearch','#stockLoc','#stockCat','#stockLowOnly'].forEach(s => $(s).addEventListener('input', renderStock));
+const catName = c => ({material:'Construction material', equipment:'Equipment', spare:'Spare part', consumable:'Consumable'}[c] || c || '—');
+
+// ------------------------------------------------------------ projects
+let openProjectId = null;
+function projShort(p){
+  return Object.keys(p.bom||{}).reduce((a,code)=>{ const need = reservedFor(p,code); if (!need) return a; const free = usableOnHand(code) - reserved(code, p.id); return a + (need > free ? 1 : 0); }, 0);
+}
+function renderProjects(){
+  const f = $('#projFilter').value;
+  const list = Object.values(S.projects).filter(p => !f ? true : f==='open' ? p.status!=='closed' : p.status===f).sort((a,b)=>b.code.localeCompare(a.code));
+  $('#projBody').innerHTML = list.map(p => {
+    const lines = Object.keys(p.bom||{}).length;
+    const planned = Object.values(p.bom||{}).reduce((a,b)=>a+b,0), issuedOnList = Object.keys(p.bom||{}).reduce((a,c)=>a+Math.min(p.issued?.[c]||0, p.bom[c]),0);
+    const pct = planned ? Math.round(issuedOnList/planned*100) : 0, short = p.status==='closed' ? 0 : projShort(p);
+    return `<tr class="click" data-p="${esc(p.id)}"><td>${esc(p.code)}</td><td>${esc(p.name)}</td><td>${esc(p.client)}</td><td>${pill(PROJ_STATUS,p.status)}</td>
+      <td class="num">${lines}</td><td class="num">${lines?pct+'%':'—'}</td><td class="num ${short?'neg':''}">${short||'—'}</td>${isMgr?`<td class="num">${peso(p.issuedCost)}</td>`:''}</tr>`;
+  }).join('') || '<tr><td colspan="8" class="muted">No projects yet.</td></tr>';
+  $$('#projBody tr[data-p]').forEach(tr => tr.onclick = () => openProject(tr.dataset.p));
+  if (openProjectId) renderProjectDetail();
+}
+$('#projFilter').addEventListener('change', renderProjects);
+const pill = (map, k) => `<span class="pill ${map[k]?.[1]||'p-gray'}">${esc(map[k]?.[0]||k)}</span>`;
+
+$('#fProject').addEventListener('submit', async e => {
+  e.preventDefault(); const m = $('#projMsg');
+  const nums = Object.values(S.projects).map(p => parseInt(String(p.code).replace(/\D/g,''))||0);
+  const code = 'PRJ-' + String((nums.length?Math.max(...nums):0)+1).padStart(4,'0');
+  try {
+    const ref = await db.collection('projects').add({code, name:$('#pName').value.trim(), client:$('#pClient').value.trim(), status:$('#pStatus').value,
+      bom:{}, issued:{}, issuedCost:0, createdAt:FV().serverTimestamp(), createdBy:me.uid});
+    e.target.reset(); m.className='msg ok'; m.textContent = `Created ${code}. Add its materials below.`;
+    openProject(ref.id);
+  } catch(err){ m.className='msg err'; m.textContent = friendly(err); }
+});
+
+function openProject(id){ openProjectId = id; $('#projList').hidden = true; $('#projDetail').hidden = false; renderProjectDetail(); loadProjectHistory(id); window.scrollTo(0,0); }
+function closeProject(){ openProjectId = null; $('#projList').hidden = false; $('#projDetail').hidden = true; }
+let projHistory = [];
+async function loadProjectHistory(id){
+  try { const snap = await db.collection('movements').where('projectId','==',id).get();
+    projHistory = snap.docs.map(d=>({id:d.id,...d.data()})).filter(m=>m.status==='posted').sort((a,b)=>(b.at?.seconds||0)-(a.at?.seconds||0));
+  } catch(e){ projHistory = []; }
+  renderProjectDetail();
+}
+function renderProjectDetail(){
+  const p = S.projects[openProjectId], box = $('#projDetail');
+  const ae = document.activeElement; if (p && box.contains(ae) && /^(INPUT|SELECT)$/.test(ae.tagName)) return;
+  if (!p){ box.innerHTML = '<div class="card">Project not found. <button class="btn ghost small" onclick="closeProject()">Back</button></div>'; return; }
+  const codes = Object.keys(p.bom||{}).sort();
+  const extra = Object.keys(p.issued||{}).filter(c => !(c in (p.bom||{})) && (p.issued[c]||0) !== 0);
+  const rows = [...codes, ...extra].map(code => {
+    const it = item(code) || {name:'(deleted item)', unit:''}, planned = p.bom?.[code]||0, issued = p.issued?.[code]||0;
+    const remaining = Math.max(0, planned-issued), free = usableOnHand(code) - reserved(code, p.id), short = p.status!=='closed' && remaining > free ? remaining - Math.max(free,0) : 0;
+    return `<tr><td>${esc(code)}</td><td>${esc(it.name)}</td>
+      <td class="num">${isMgr && p.status!=='closed' && code in (p.bom||{}) ? `<input type="number" min="0" step="any" value="${planned}" style="width:90px;text-align:right" data-bom="${esc(code)}">` : fmt(planned)}</td>
+      <td class="num">${fmt(issued)}</td><td class="num">${fmt(remaining)}</td><td class="num">${fmt(Math.max(free,0))}</td>
+      <td class="num ${short?'neg':''}">${short?fmt(short):'—'}</td><td>${esc(it.unit)}</td>
+      <td>${isMgr && p.status!=='closed' && code in (p.bom||{}) ? `<button class="btn ghost small" data-rmbom="${esc(code)}">Remove</button>`:''}</td></tr>`;
+  }).join('');
+  box.innerHTML = `
+    <div class="card">
+      <div class="toolbar"><button class="btn ghost small" onclick="closeProject()">← All projects</button><span style="flex:1"></span>
+        ${p.status!=='closed'?`<button class="btn small" onclick="issueForProject('${esc(p.id)}')">Issue materials</button>`:''}</div>
+      <h2>${esc(p.code)} · ${esc(p.name)} ${pill(PROJ_STATUS,p.status)}</h2>
+      <p class="muted" style="margin:0">${p.client?'Client: '+esc(p.client)+' · ':''}${isMgr?'Material cost so far: <b>'+peso(p.issuedCost)+'</b>':''}</p>
+      ${isMgr?`<div class="row3"><div><label for="pdName">Name</label><input id="pdName" value="${esc(p.name)}"></div>
+        <div><label for="pdClient">Client</label><input id="pdClient" value="${esc(p.client)}"></div>
+        <div><label for="pdStatus">Status</label><select id="pdStatus">${Object.entries(PROJ_STATUS).map(([k,v])=>`<option value="${k}" ${p.status===k?'selected':''}>${v[0]}</option>`).join('')}</select></div></div>
+        <button class="btn ghost small" style="margin-top:10px" onclick="saveProjectHead()">Save details</button>`:''}
+    </div>
+    <div class="card">
+      <h2>Material list and reservations</h2>
+      <p class="hint" style="margin-top:0">"Still to issue" is reserved for this project while it is planned or active. "Free now" is stock not reserved for other projects.</p>
+      <div class="scroll"><table><thead><tr><th>Code</th><th>Item</th><th class="num">Planned</th><th class="num">Issued</th><th class="num">Still to issue</th><th class="num">Free now</th><th class="num">Short</th><th>Unit</th><th></th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="9" class="muted">No materials listed yet.</td></tr>'}</tbody></table></div>
+      ${isMgr && p.status!=='closed' ? `<div class="toolbar" style="margin-top:12px"><select id="bomItem">${Object.values(S.items).sort((a,b)=>a.id.localeCompare(b.id)).map(i=>`<option value="${esc(i.id)}">${esc(i.id)} — ${esc(i.name)}</option>`).join('')}</select>
+        <input id="bomQty" type="number" min="0.001" step="any" placeholder="Planned qty" style="max-width:140px"><button class="btn small" onclick="addBomLine()">Add to list</button></div>
+        <div class="msg" id="bomMsg"></div>` : ''}
+    </div>
+    <div class="card">
+      <h2>Movements for this project</h2>
+      <div class="scroll"><table><thead><tr><th>Date</th><th>Reason</th><th>Item</th><th class="num">Qty</th><th>Reference</th><th>By</th>${isMgr?'<th class="num">Value</th>':''}</tr></thead>
+      <tbody>${projHistory.map(m=>`<tr><td>${dt(m.at)}</td><td>${esc(m.reasonLabel)}</td><td>${esc(m.itemCode)}</td><td class="num ${m.qty>0?'pos':'neg'}">${m.qty>0?'+':''}${fmt(m.qty)}</td><td>${esc(m.ref)}${m.serials?.length?'<div class="muted">SN: '+m.serials.map(esc).join(', ')+'</div>':''}</td><td>${esc(m.byName)}</td>${isMgr?`<td class="num">${peso(Math.abs(m.qty)*(m.unitCost||0))}</td>`:''}</tr>`).join('') || '<tr><td colspan="7" class="muted">Nothing issued yet.</td></tr>'}</tbody></table></div>
+    </div>`;
+  box.querySelectorAll('[data-bom]').forEach(inp => inp.onchange = () => setBom(inp.dataset.bom, inp.value));
+  box.querySelectorAll('[data-rmbom]').forEach(b => b.onclick = () => removeBom(b.dataset.rmbom));
+}
+async function saveProjectHead(){
+  try { await db.doc('projects/'+openProjectId).update({name:$('#pdName').value.trim(), client:$('#pdClient').value.trim(), status:$('#pdStatus').value, updatedAt:FV().serverTimestamp()}); }
+  catch(err){ alertMsg(friendly(err)); }
+}
+async function addBomLine(){
+  const code = $('#bomItem').value, q = +$('#bomQty').value, m = $('#bomMsg');
+  if (!code || !(q>0)){ m.className='msg err'; m.textContent='Choose an item and a planned quantity.'; return; }
+  const cur = S.projects[openProjectId].bom?.[code] || 0;
+  try { await db.doc('projects/'+openProjectId).update({['bom.'+code]: cur + q, updatedAt:FV().serverTimestamp()}); m.className='msg ok'; m.textContent = `${code} planned: ${fmt(cur+q)}`; $('#bomQty').value=''; }
+  catch(err){ m.className='msg err'; m.textContent = friendly(err); }
+}
+async function setBom(code, v){ try { await db.doc('projects/'+openProjectId).update({['bom.'+code]: Math.max(0,+v||0), updatedAt:FV().serverTimestamp()}); } catch(err){ alertMsg(friendly(err)); } }
+async function removeBom(code){ try { await db.doc('projects/'+openProjectId).update({['bom.'+code]: FV().delete(), updatedAt:FV().serverTimestamp()}); } catch(err){ alertMsg(friendly(err)); } }
+function issueForProject(pid){
+  showTab('issue'); const f = $('#fIssue'); f.reason.value = 'ISSUE_PROJECT'; fillFormSelects(f); f.project.value = pid; refreshForm(f); f.querySelector('.scan').focus();
+}
+
+// ------------------------------------------------------------ warranty
+let faultyTarget = null;
+function onFaultySerial(e){
+  if (e.key!=='Enter') return; e.preventDefault();
+  const s = e.target.value.trim(), where = $('#fyWhere').value, info = $('#fyInfo');
+  faultyTarget = null; info.className='info';
+  const want = where==='site' ? 'issued' : 'in_stock';
+  const matches = Object.values(S.serials).filter(x => x.serial === s);
+  if (!matches.length){ info.className='info warn'; info.textContent = `Serial ${s} is not in the system as issued or in stock.`; return; }
+  const m = matches.find(x => x.status===want);
+  if (!m){ info.className='info warn'; info.textContent = `Serial ${s} is ${SERIAL_STATUS[matches[0].status][0].toLowerCase()}, not ${want==='issued'?'issued to a site':'in the warehouse'}.`; return; }
+  faultyTarget = m; const it = item(m.itemCode);
+  info.textContent = `${m.itemCode} — ${it?.name||''} · ${want==='issued' ? 'issued to ' + (S.projects[m.projectId]?.code || m.issuedRef || 'a sale/service') : 'at ' + locName(m.loc)}`;
+  $('#fyNote').focus();
+}
+async function submitFaulty(e){
+  e.preventDefault(); const msg = $('#fyMsg');
+  if (!faultyTarget){ msg.className='msg err'; msg.textContent='Scan a serial number first and press Enter.'; return; }
+  const site = $('#fyWhere').value==='site';
+  msg.className='msg'; msg.textContent='Saving…';
+  try {
+    await post({reason: site ? 'FAULTY_SITE' : 'FAULTY_FOUND', itemCode:faultyTarget.itemCode, loc: site ? 'FAULTY' : faultyTarget.loc, toLoc:'FAULTY',
+      qty:1, serials:[faultyTarget.serial], projectId: site ? faultyTarget.projectId||null : null, ref:$('#fyRef').value.trim(), note:$('#fyNote').value.trim()});
+    msg.className='msg ok'; msg.textContent = `Logged ${faultyTarget.serial} as faulty.`;
+    faultyTarget = null; e.target.reset(); $('#fyInfo').className='info'; $('#fyInfo').textContent='Scan the unit\'s serial number.';
+  } catch(err){ msg.className='msg err'; msg.textContent = friendly(err); }
+}
+function renderWarranty(){
+  const list = Object.values(S.serials).filter(s => s.status==='faulty' || s.status==='at_supplier').sort((a,b)=>a.status.localeCompare(b.status));
+  $('#wBody').innerHTML = list.map(s => `<tr><td><code>${esc(s.serial)}</code></td><td>${esc(s.itemCode)}<div class="muted">${esc(item(s.itemCode)?.name)}</div></td>
+    <td>${pill(SERIAL_STATUS,s.status)}</td><td>${esc(s.fault||'')}${s.rma?'<div class="muted">RMA '+esc(s.rma)+'</div>':''}</td>
+    <td>${esc(S.projects[s.projectId]?.code||'')}</td>
+    <td style="white-space:nowrap">${s.status==='faulty'
+      ? `<button class="btn small" data-w="send" data-s="${esc(s.id)}">Send to supplier</button> <button class="btn ghost small" data-w="writeoff" data-s="${esc(s.id)}">Write off</button>`
+      : `<button class="btn small" data-w="back" data-s="${esc(s.id)}">Back repaired</button> <button class="btn ghost small" data-w="close" data-s="${esc(s.id)}">Replaced / closed</button>`}</td></tr>`).join('')
+    || '<tr><td colspan="6" class="muted">No units in the warranty process.</td></tr>';
+  $$('#wBody [data-w]').forEach(b => b.onclick = () => warrantyAction(b.dataset.w, S.serials[b.dataset.s]));
+}
+function warrantyAction(kind, s){
+  const it = item(s.itemCode);
+  const T = {
+    send:{title:'Send to supplier', body:`<label for="dRef">Supplier RMA or return reference</label><input id="dRef" required><label for="dNote">Note</label><input id="dNote">`, ok:'Record as sent'},
+    writeoff:{title:'Write off faulty unit', body:`<p class="muted">Removes the unit from stock as damaged. ${isMgr?'':'A manager must approve this.'}</p><label for="dNote">Reason</label><input id="dNote" required>`, ok:'Write off'},
+    back:{title:'Back from supplier, repaired', body:`<label for="dLoc">Put it in</label><select id="dLoc">${storeLocs().map(l=>`<option value="${esc(l.id)}">${esc(l.name)}</option>`).join('')}</select><label for="dRef">Reference</label><input id="dRef"><label for="dNote">Note</label><input id="dNote">`, ok:'Receive back'},
+    close:{title:'Close without return', body:`<p class="muted">Use when the supplier replaced the unit with a new one or rejected the claim. Receive a replacement unit separately under Receive → Warranty replacement.</p><label for="dOutcome">Outcome</label><select id="dOutcome"><option>Replaced by supplier</option><option>Claim rejected</option><option>Scrapped by supplier</option></select><label for="dNote">Note</label><input id="dNote">`, ok:'Close'},
+  }[kind];
+  dialogForm(`${T.title}: ${esc(s.serial)}`, `<p class="muted" style="margin-top:0">${esc(s.itemCode)} — ${esc(it?.name)}</p>` + T.body, T.ok, async () => {
+    const note = $('#dNote')?.value.trim() || '';
+    if (kind==='send') await post({reason:'TO_SUPPLIER', itemCode:s.itemCode, loc:'FAULTY', qty:1, serials:[s.serial], ref:$('#dRef').value.trim(), note});
+    if (kind==='writeoff'){ const r = await post({reason:'DAMAGED', itemCode:s.itemCode, loc:s.loc, qty:1, serials:[s.serial], note}); if (r.pending) alertMsg('Sent to a manager for approval.'); }
+    if (kind==='back') await post({reason:'REPAIRED', itemCode:s.itemCode, loc:$('#dLoc').value, qty:1, serials:[s.serial], ref:$('#dRef').value.trim(), note});
+    if (kind==='close') await db.doc('serials/'+s.id).update({status:'closed', outcome:$('#dOutcome').value, closeNote:note, closedBy:me.name, closedAt:FV().serverTimestamp(), updatedAt:FV().serverTimestamp()});
+  });
+}
+async function lookupSerial(s){
+  const out = $('#serResult'); if (!s){ out.innerHTML=''; return; }
+  out.innerHTML = '<p class="muted">Looking up…</p>';
+  try {
+    const [sd, mv] = await Promise.all([db.collection('serials').where('serial','==',s).get(), db.collection('movements').where('serials','array-contains',s).get()]);
+    if (sd.empty){ out.innerHTML = `<p class="muted">No unit with serial ${esc(s)}.</p>`; return; }
+    const moves = mv.docs.map(d=>d.data()).filter(m=>m.status==='posted').sort((a,b)=>(a.at?.seconds||0)-(b.at?.seconds||0));
+    out.innerHTML = sd.docs.map(d => { const x = d.data(); return `<div class="info"><b>${esc(x.itemCode)}</b> — ${esc(item(x.itemCode)?.name)} · ${pill(SERIAL_STATUS,x.status)}
+      ${x.loc?' · at '+esc(locName(x.loc)):''}${x.projectId?' · project '+esc(S.projects[x.projectId]?.code||''):''}${x.fault?' · fault: '+esc(x.fault):''}${x.outcome?' · '+esc(x.outcome):''}</div>`; }).join('')
+      + `<div class="scroll"><table><thead><tr><th>Date</th><th>Reason</th><th>Location</th><th>Project / reference</th><th>By</th></tr></thead><tbody>${moves.map(m=>`<tr><td>${dt(m.at)}</td><td>${esc(m.reasonLabel)}</td><td>${esc(m.locName)}${m.toLocName?' → '+esc(m.toLocName):''}</td><td>${esc(m.projectCode||'')} ${esc(m.ref)}</td><td>${esc(m.byName)}</td></tr>`).join('')}</tbody></table></div>`;
+  } catch(err){ out.innerHTML = `<p class="msg err">${esc(friendly(err))}</p>`; }
+}
+
+// ------------------------------------------------------------ approvals
+function renderPending(){
+  const rows = S.pending.slice().sort((a,b)=>(a.at?.seconds||0)-(b.at?.seconds||0));
+  $('#myPending').innerHTML = rows.map(m=>`<tr><td>${dt(m.at)}</td><td>${esc(m.itemCode)}</td><td class="num ${m.qty>0?'pos':'neg'}">${m.qty>0?'+':''}${fmt(m.qty)}</td><td>${esc(m.reasonLabel)}${m.note?'<div class="muted">'+esc(m.note)+'</div>':''}</td><td>${esc(m.byName)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Nothing waiting.</td></tr>';
+  if (!isMgr) return;
+  $('#apBody').innerHTML = rows.map(m=>`<tr><td>${dt(m.at)}</td><td>${esc(m.itemCode)}<div class="muted">${esc(m.itemName)}</div></td><td>${esc(m.locName)}</td>
+    <td class="num ${m.qty>0?'pos':'neg'}">${m.qty>0?'+':''}${fmt(m.qty)} ${esc(m.unit)}</td>
+    <td>${esc(m.reasonLabel)}${m.note?'<div class="muted">'+esc(m.note)+'</div>':''}${m.serials?.length?'<div class="muted">SN: '+m.serials.map(esc).join(', ')+'</div>':''}</td><td>${esc(m.byName)}</td>
+    <td style="white-space:nowrap"><button class="btn small" data-ap="${m.id}">Approve</button> <button class="btn ghost small" data-rj="${m.id}">Reject</button></td></tr>`).join('')
+    || '<tr><td colspan="7" class="muted">Nothing waiting for approval.</td></tr>';
+  $$('#apBody [data-ap]').forEach(b => b.onclick = () => approve(b.dataset.ap, true, b));
+  $$('#apBody [data-rj]').forEach(b => b.onclick = () => approve(b.dataset.rj, false, b));
+}
+async function approve(id, ok, btn){
+  const m = S.pending.find(x=>x.id===id), msg = $('#apMsg'); if (!m) return;
+  btn.disabled = true; msg.className='msg';
+  try {
+    if (ok) await applyMovement(m, db.doc('movements/'+id));
+    else await db.doc('movements/'+id).update({status:'rejected', approvedBy:me.uid, approvedByName:me.name, approvedAt:FV().serverTimestamp()});
+    msg.className='msg ok'; msg.textContent = ok ? `Approved: ${m.itemCode} ${m.qty>0?'+':''}${fmt(m.qty)}.` : `Rejected ${m.itemCode} adjustment.`;
+  } catch(err){ msg.className='msg err'; msg.textContent = friendly(err); btn.disabled = false; }
+}
+
+// ------------------------------------------------------------ history
+let hRows = [];
+function fillHistoryFilters(){
+  const hi = $('#hItem'), hv = hi.value; hi.innerHTML = '<option value="">All items</option>' + Object.values(S.items).sort((a,b)=>a.id.localeCompare(b.id)).map(i=>`<option value="${esc(i.id)}">${esc(i.id)} — ${esc(i.name)}</option>`).join(''); hi.value = hv;
+  const hp = $('#hProject'), pv = hp.value; hp.innerHTML = '<option value="">All projects</option>' + Object.values(S.projects).sort((a,b)=>b.code.localeCompare(a.code)).map(p=>`<option value="${esc(p.id)}">${esc(p.code)} · ${esc(p.name)}</option>`).join(''); hp.value = pv;
+}
+async function loadHistory(){
+  const fi = $('#hItem').value, fp = $('#hProject').value, note = $('#hNote');
+  note.textContent = 'Loading…';
+  try {
+    let q = db.collection('movements');
+    if (fi) q = q.where('itemCode','==',fi); else if (fp) q = q.where('projectId','==',fp); else q = q.orderBy('at','desc').limit(300);
+    const snap = await q.get();
+    hRows = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.at?.seconds||0)-(a.at?.seconds||0));
+    renderHistory();
+    note.textContent = (!fi && !fp) ? 'Showing the latest 300 movements. Filter by item or project to see their full history.' : '';
+  } catch(err){ note.textContent = friendly(err); }
+}
+function renderHistory(){
+  const fp = $('#hProject').value, ft = $('#hType').value;
+  const rows = hRows.filter(m => (!fp || m.projectId===fp) && (!ft || m.type===ft));
+  const stPill = m => m.status==='pending' ? ' <span class="pill p-amber">Pending</span>' : m.status==='rejected' ? ' <span class="pill p-gray">Rejected</span>' : '';
+  $('#hBody').innerHTML = rows.map(m => `<tr><td style="white-space:nowrap">${dt(m.at)}</td><td>${esc(m.type)}${stPill(m)}</td>
+    <td>${esc(m.itemCode)}<div class="muted">${esc(m.itemName)}</div></td><td>${esc(m.locName)}${m.toLocName?' → '+esc(m.toLocName):''}</td>
+    <td class="num ${m.type==='TRANSFER'?'':m.qty>0?'pos':'neg'}">${m.type==='TRANSFER'?'':m.qty>0?'+':''}${fmt(m.qty)}</td>
+    <td>${esc(m.reasonLabel)}${m.projectCode?' · '+esc(m.projectCode):''}${m.ref?' · '+esc(m.ref):''}${m.note?'<div class="muted">'+esc(m.note)+'</div>':''}${m.serials?.length?'<div class="muted">SN: '+m.serials.map(esc).join(', ')+'</div>':''}${m.approvedByName?'<div class="muted">'+(m.status==='rejected'?'Rejected':'Approved')+' by '+esc(m.approvedByName)+'</div>':''}</td>
+    <td>${esc(m.byName)}</td>${isMgr?`<td class="num">${m.unitCost!=null?peso(m.unitCost):''}</td>`:''}</tr>`).join('')
+    || '<tr><td colspan="8" class="muted">No movements.</td></tr>';
+}
+['#hItem','#hProject'].forEach(s => $(s).addEventListener('change', loadHistory));
+$('#hType').addEventListener('change', renderHistory);
+const dt = ts => { if (!ts?.toDate) return '…'; const d = ts.toDate(); return d.toLocaleDateString('en-PH',{month:'short',day:'numeric',year:'numeric'}) + ' <span class="muted">' + d.toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit'}) + '</span>'; };
+
+// ------------------------------------------------------------ setup: items, locations, users
+function renderSetup(){
+  const q = $('#itemSearch').value.trim().toLowerCase();
+  $('#itemBody').innerHTML = Object.values(S.items).filter(i => !q || (i.id+' '+i.name).toLowerCase().includes(q)).sort((a,b)=>a.id.localeCompare(b.id)).map(i => `<tr>
+    <td>${esc(i.id)}</td><td>${esc(i.name)}</td><td>${esc(i.unit)}</td><td>${catName(i.category)}</td><td>${i.serialized?'Yes':'—'}</td>
+    <td class="num">${fmt(i.reorder)}</td>${isMgr?`<td class="num">${peso(i.avgCost)}</td><td><button class="btn ghost small" data-edit="${esc(i.id)}">Edit</button></td>`:''}</tr>`).join('')
+    || '<tr><td colspan="8" class="muted">No items yet.</td></tr>';
+  $$('#itemBody [data-edit]').forEach(b => b.onclick = () => editItem(b.dataset.edit));
+  if (!isMgr) return;
+  $('#locList').innerHTML = allLocs().map(l=>`<span class="chip" style="padding-right:10px">${esc(l.name)}</span>`).join('');
+  $('#userBody').innerHTML = Object.values(S.users).sort((a,b)=>a.name.localeCompare(b.name)).map(u => `<tr><td>${esc(u.name)}</td><td>${esc(u.username)}</td>
+    <td>${u.role==='manager'?'Manager':'Keeper'}</td><td>${u.active?'<span class="pill p-green">Active</span>':'<span class="pill p-gray">Off</span>'}</td>
+    <td>${u.id===me.uid?'<span class="muted">You</span>':`<button class="btn ghost small" data-tog="${u.id}">${u.active?'Turn off':'Turn on'}</button> <button class="btn ghost small" data-role="${u.id}">Make ${u.role==='manager'?'keeper':'manager'}</button>`}</td></tr>`).join('');
+  $$('#userBody [data-tog]').forEach(b => b.onclick = () => db.doc('users/'+b.dataset.tog).update({active:!S.users[b.dataset.tog].active}).catch(e=>alertMsg(friendly(e))));
+  $$('#userBody [data-role]').forEach(b => b.onclick = () => db.doc('users/'+b.dataset.role).update({role:S.users[b.dataset.role].role==='manager'?'keeper':'manager'}).catch(e=>alertMsg(friendly(e))));
+}
+$('#itemSearch').addEventListener('input', renderSetup);
+
+$('#fItem').addEventListener('submit', async e => {
+  e.preventDefault(); const m = $('#itemMsg');
+  const code = $('#iCode').value.trim().toUpperCase();
+  if (!CODE_RE.test(code)){ m.className='msg err'; m.textContent='Code: letters, numbers, dash, dot or underscore only, no spaces, up to 24 characters.'; return; }
+  if (S.items[code]){ m.className='msg err'; m.textContent='That code already exists.'; return; }
+  try {
+    await db.doc('items/'+code).set({name:$('#iName').value.trim(), unit:$('#iUnit').value.trim(), category:$('#iCat').value,
+      serialized:$('#iSerial').checked, reorder:+$('#iReorder').value||0, onHand:0, avgCost:0, createdBy:me.uid, createdAt:FV().serverTimestamp()});
+    e.target.reset(); $('#iReorder').value = 0; m.className='msg ok'; m.textContent=`Added ${code}.`;
+  } catch(err){ m.className='msg err'; m.textContent = /permission/i.test(err.message) ? 'That code already exists.' : friendly(err); }
+});
+function editItem(code){
+  const i = item(code);
+  dialogForm(`Edit ${esc(code)}`, `
+    <label for="eName">Name</label><input id="eName" value="${esc(i.name)}">
+    <div class="row"><div><label for="eUnit">Unit</label><input id="eUnit" value="${esc(i.unit)}"></div>
+    <div><label for="eCat">Category</label><select id="eCat">${['material','equipment','spare','consumable'].map(c=>`<option value="${c}" ${i.category===c?'selected':''}>${catName(c)}</option>`).join('')}</select></div></div>
+    <div class="row"><div><label for="eReorder">Reorder level</label><input id="eReorder" type="number" min="0" step="any" value="${i.reorder||0}"></div>
+    <div><label for="eCost">Average cost ₱</label><input id="eCost" type="number" min="0" step="any" value="${i.avgCost||0}"></div></div>
+    <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="eSer" ${i.serialized?'checked':''} ${(i.onHand||0)!==0?'disabled':''}> Track serial numbers</label>
+    ${(i.onHand||0)!==0?'<p class="hint">Serial tracking can only be switched while stock is zero.</p>':''}
+    <p class="hint">Changing average cost revalues all stock of this item. Use it to correct costs, not for routine receiving.</p>`, 'Save', async () => {
+      await db.doc('items/'+code).update({name:$('#eName').value.trim(), unit:$('#eUnit').value.trim(), category:$('#eCat').value, reorder:+$('#eReorder').value||0,
+        avgCost:+$('#eCost').value||0, serialized: (i.onHand||0)!==0 ? !!i.serialized : $('#eSer').checked, updatedAt:FV().serverTimestamp()});
+  });
+}
+$('#fLoc').addEventListener('submit', async e => {
+  e.preventDefault(); const n = $('#locName').value.trim(); if (!n) return;
+  let id = n.toUpperCase().replace(/[^A-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,20) || 'LOC';
+  while (S.locations[id]) id += '-2';
+  try { await db.doc('locations/'+id).set({name:n, kind:'store'}); e.target.reset(); } catch(err){ alertMsg(friendly(err)); }
+});
+$('#fUser').addEventListener('submit', async e => {
+  e.preventDefault(); const m = $('#userMsg'), u = $('#uUser').value.trim().toLowerCase();
+  if (!validUsername(u)){ m.className='msg err'; m.textContent='Username: 3–30 lowercase letters, numbers, dot, dash or underscore.'; return; }
+  m.className='msg'; m.textContent='Creating…';
+  try {
+    const sec = firebase.apps.find(a=>a.name==='sec') || firebase.initializeApp(firebase.app().options, 'sec');
+    if (USE_EMU && !sec._emu){ sec.auth().useEmulator('http://127.0.0.1:9099'); sec._emu = true; }
+    const cred = await sec.auth().createUserWithEmailAndPassword(toEmail(u), $('#uPass').value);
+    const uid = cred.user.uid; await sec.auth().signOut();
+    await db.doc('users/'+uid).set({name:$('#uName').value.trim(), username:u, role:$('#uRole').value, active:true, createdAt:FV().serverTimestamp(), createdBy:me.uid});
+    m.className='msg ok'; m.textContent = `Created ${u}. Give them the username and password.`; e.target.reset();
+  } catch(err){ m.className='msg err'; m.textContent = /already-in-use/.test(err.code) ? 'That username is taken.' : friendly(err); }
+});
+
+// ------------------------------------------------------------ import from Basic Warehouse backup
+let importData = null;
+$('#importFile').addEventListener('change', async e => {
+  const f = e.target.files[0], box = $('#importPreview'); if (!f) return;
+  try {
+    const d = JSON.parse(await f.text()); if (!d.items || !d.movements) throw 0;
+    const bal = {};
+    d.movements.forEach(m => { const k = m.item+'|'+m.loc; bal[k] = (bal[k]||0) + m.qty; });
+    const items = d.items.map(i => ({...i, newCode: String(i.code).toUpperCase().replace(/[^A-Z0-9._-]/g,'-').slice(0,24)}));
+    importData = {items, locs:d.locations, bal};
+    const lines = items.map(i => { const qty = d.locations.reduce((a,l)=>a+(bal[i.id+'|'+l.id]||0),0); return `<tr><td>${esc(i.newCode)}</td><td>${esc(i.name)}</td><td class="num">${fmt(qty)}</td><td>${S.items[i.newCode]?'<span class="pill p-gray">Exists, skip</span>':'<span class="pill p-green">New</span>'}</td></tr>`; }).join('');
+    box.innerHTML = `<div class="scroll" style="margin-top:10px"><table><thead><tr><th>Code</th><th>Name</th><th class="num">Stock</th><th></th></tr></thead><tbody>${lines}</tbody></table></div>
+      <button class="btn" id="doImport">Import ${items.filter(i=>!S.items[i.newCode]).length} item(s)</button><div class="msg" id="impMsg"></div>`;
+    $('#doImport').onclick = runImport;
+  } catch(_){ box.innerHTML = '<p class="msg err">That is not a Basic Warehouse backup file.</p>'; }
+});
+async function runImport(){
+  const m = $('#impMsg'), btn = $('#doImport'); btn.disabled = true;
+  const locMap = {};
+  try {
+    for (const l of importData.locs){
+      const existing = Object.values(S.locations).find(x => x.name.toLowerCase() === l.name.toLowerCase() || (l.name==='Main Warehouse' && x.id==='MAIN'));
+      if (existing){ locMap[l.id] = existing.id; continue; }
+      let id = l.name.toUpperCase().replace(/[^A-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,20) || 'LOC'; while (S.locations[id]) id += '-2';
+      await db.doc('locations/'+id).set({name:l.name, kind:'store'}); S.locations[id] = {id, name:l.name, kind:'store'}; locMap[l.id] = id;
+    }
+    let n = 0;
+    for (const i of importData.items){
+      if (S.items[i.newCode]) continue;
+      await db.doc('items/'+i.newCode).set({name:i.name, unit:i.unit||'pc', category:'material', serialized:false, reorder:+i.reorder||0, onHand:0, avgCost:0, createdBy:me.uid, createdAt:FV().serverTimestamp()});
+      S.items[i.newCode] = {id:i.newCode, name:i.name, unit:i.unit, onHand:0, avgCost:0};
+      for (const l of importData.locs){
+        const q = importData.bal[i.id+'|'+l.id] || 0;
+        if (q > 0) await post({reason:'OPENING', itemCode:i.newCode, loc:locMap[l.id], qty:q, ref:'Import from Basic Warehouse'});
+      }
+      n++; m.className='msg'; m.textContent = `Imported ${n}…`;
+    }
+    m.className='msg ok'; m.textContent = `Done. Imported ${n} item(s) with their opening stock. Set costs and categories under Items.`;
+  } catch(err){ m.className='msg err'; m.textContent = friendly(err); btn.disabled = false; }
+}
+
+// ------------------------------------------------------------ dialog + helpers
+function dialogForm(title, body, okLabel, onOk){
+  const d = $('#dlg'), f = $('#dlgForm');
+  f.innerHTML = `<h2>${title}</h2>${body}<div class="msg" id="dlgMsg"></div>
+    <div class="toolbar" style="margin:14px 0 0;justify-content:flex-end"><button type="button" class="btn ghost small" id="dlgCancel">Cancel</button><button type="submit" class="btn small" id="dlgOk">${esc(okLabel)}</button></div>`;
+  $('#dlgCancel').onclick = () => d.close();
+  f.onsubmit = async e => {
+    e.preventDefault(); const b = $('#dlgOk'); b.disabled = true;
+    try { await onOk(); d.close(); } catch(err){ $('#dlgMsg').className='msg err'; $('#dlgMsg').textContent = friendly(err); b.disabled = false; }
+  };
+  d.showModal();
+}
+function alertMsg(t){ dialogForm('Note', `<p>${esc(t)}</p>`, 'OK', async()=>{}); }
+
+// ------------------------------------------------------------ tabs
+$('#tabs').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (b) showTab(b.dataset.tab); });
+function showTab(t){
+  $$('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+  $$('section.tab').forEach(s => s.classList.toggle('active', s.id === t));
+  if (t==='history') loadHistory();
+  if (t==='projects' && !openProjectId) closeProject();
+  const sc = document.querySelector(`#${t} .scan`); if (sc) sc.focus();
+}
+
+// ------------------------------------------------------------ export
+function download(name, text){
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text],{type:'text/csv'})); a.download = name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+}
+const csv = rows => rows.map(r => r.map(c => `"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\n');
+const today = () => new Date().toISOString().slice(0,10);
+function exportStock(){
+  const head = ['Code','Item','Category','Location','On hand','Unit','Reserved (all)','Available (all)','Reorder at'];
+  if (isMgr) head.push('Avg cost','Value');
+  const rows = [head];
+  Object.values(S.stock).filter(s=>s.qty).sort((a,b)=>a.itemCode.localeCompare(b.itemCode)).forEach(s => {
+    const i = item(s.itemCode); if (!i) return;
+    const r = [i.id, i.name, catName(i.category), locName(s.loc), s.qty, i.unit, reserved(i.id), available(i.id), i.reorder];
+    if (isMgr) r.push(i.avgCost, (s.qty*(i.avgCost||0)).toFixed(2));
+    rows.push(r);
+  });
+  download(`stock-${today()}.csv`, csv(rows));
+}
+function exportHistory(){
+  const head = ['Date','Type','Reason','Status','Code','Item','Location','To location','Qty','Unit','Project','Reference','Note','Serials','By'];
+  if (isMgr) head.push('Unit cost');
+  const rows = [head];
+  hRows.forEach(m => { const r = [m.at?.toDate?.().toISOString()||'', m.type, m.reasonLabel, m.status, m.itemCode, m.itemName, m.locName, m.toLocName||'', m.qty, m.unit, m.projectCode||'', m.ref, m.note, (m.serials||[]).join(' '), m.byName]; if (isMgr) r.push(m.unitCost??''); rows.push(r); });
+  download(`movements-${today()}.csv`, csv(rows));
+}
+
+// ------------------------------------------------------------ barcodes + labels (Code 128-B)
+const C128 = ["11011001100","11001101100","11001100110","10010011000","10010001100","10001001100","10011001000","10011000100","10001100100","11001001000","11001000100","11000100100","10110011100","10011011100","10011001110","10111001100","10011101100","10011100110","11001110010","11001011100","11001001110","11011100100","11001110100","11101101110","11101001100","11100101100","11100100110","11101100100","11100110100","11100110010","11011011000","11011000110","11000110110","10100011000","10001011000","10001000110","10110001000","10001101000","10001100010","11010001000","11000101000","11000100010","10110111000","10110001110","10001101110","10111011000","10111000110","10001110110","11101110110","11010001110","11000101110","11011101000","11011100010","11011101110","11101011000","11101000110","11100010110","11101101000","11101100010","11100011010","11101111010","11001000010","11110001010","10100110000","10100001100","10010110000","10010000110","10000101100","10000100110","10110010000","10110000100","10011010000","10011000010","10000110100","10000110010","11000010010","11001010000","11110111010","11000010100","10001111010","10100111100","10010111100","10010011110","10111100100","10011110100","10011110010","11110100100","11110010100","11110010010","11011011110","11011110110","11110110110","10101111000","10100011110","10001011110","10111101000","10111100010","11110101000","11110100010","10111011110","10111101110","11101011110","11110101110","11010000100","11010010000","11010011100"];
+function code128Bits(text){
+  const vals = [104];
+  for (const ch of text){ const c = ch.charCodeAt(0); if (c < 32 || c > 126) throw new Error('bad char'); vals.push(c - 32); }
+  let sum = 104; for (let i = 1; i < vals.length; i++) sum += vals[i] * i;
+  vals.push(sum % 103);
+  return vals.map(v => C128[v]).join('') + '1100011101011';
+}
+function barcodeSVG(text){
+  const bits = code128Bits(text), q = 10, w = bits.length + q*2;
+  let rects = '', x = 0;
+  while (x < bits.length){ if (bits[x] === '1'){ let s = x; while (bits[x] === '1') x++; rects += `<rect x="${s+q}" y="0" width="${x-s}" height="40"/>`; } else x++; }
+  return `<svg viewBox="0 0 ${w} 40" preserveAspectRatio="none" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg"><g fill="#000">${rects}</g></svg>`;
+}
+const copies = {};
+function setAllCopies(){ const n = Math.max(0, parseInt($('#allCopies').value)||0); Object.keys(S.items).forEach(k => copies[k] = n); renderLabels(); }
+function setCopies(id, v){ copies[id] = Math.max(0, parseInt(v)||0); renderLabelPreview(); }
+function renderLabels(){
+  const items = Object.values(S.items).sort((a,b)=>a.id.localeCompare(b.id));
+  items.forEach(i => { if (copies[i.id] === undefined) copies[i.id] = 0; });
+  if (document.activeElement?.closest?.('#labelBody')) return;
+  $('#labelBody').innerHTML = items.map(i => `<tr><td>${esc(i.id)}</td><td>${esc(i.name)}</td>
+    <td class="num"><input type="number" min="0" value="${copies[i.id]}" style="width:80px;text-align:right" data-copies="${esc(i.id)}"></td></tr>`).join('') || '<tr><td colspan="3" class="muted">No items yet.</td></tr>';
+  $$('#labelBody [data-copies]').forEach(inp => inp.oninput = () => setCopies(inp.dataset.copies, inp.value));
+  renderLabelPreview();
+}
+const labelHTML = i => `<div class="label"><div class="ln">${esc(i.name)}</div>${barcodeSVG(i.id)}<div class="lc">${esc(i.id)}</div></div>`;
+function renderLabelPreview(){
+  const sz = $('#labelSize').value, pv = $('#labelPreview'); pv.className = 'sz-' + sz;
+  const list = Object.values(S.items).filter(i => copies[i.id] > 0).sort((a,b)=>a.id.localeCompare(b.id));
+  pv.innerHTML = list.map(labelHTML).join('') || '<p class="muted">Set copies above 0 to preview labels.</p>';
+  const total = list.reduce((a,i)=>a+copies[i.id],0), long = list.filter(i => i.id.length > (sz==='a4'?16:12)).map(i=>i.id);
+  $('#labelNote').textContent = (total?`${total} label(s) will print.`:'') + (long.length?` Long codes (${long.join(', ')}) make thin bars that may be harder to scan.`:'');
+}
+$('#labelSize').addEventListener('change', renderLabelPreview);
+function printLabels(){
+  const sz = $('#labelSize').value; let html = '';
+  Object.values(S.items).sort((a,b)=>a.id.localeCompare(b.id)).forEach(i => { for (let n = 0; n < (copies[i.id]||0); n++) html += labelHTML(i); });
+  if (!html){ alertMsg('Set at least one copy first.'); return; }
+  const pa = $('#printArea'); pa.className = 'sz-' + sz; pa.innerHTML = html;
+  $('#pageRule').textContent = sz==='a4' ? '@page{size:A4;margin:10.7mm 7mm}' : sz==='40x30' ? '@page{size:40mm 30mm;margin:0}' : '@page{size:50mm 25mm;margin:0}';
+  window.print();
+}
+</script>
+</body>
+</html>
