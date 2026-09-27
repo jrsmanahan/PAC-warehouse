@@ -11,7 +11,7 @@
      ============================================================ -->
 <script>
 window.WH_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
+apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
   authDomain: "pac-warehouse.firebaseapp.com",
   projectId: "pac-warehouse",
   storageBucket: "pac-warehouse.firebasestorage.app",
@@ -138,6 +138,7 @@ window.WH_FIREBASE_CONFIG = {
     <p class="muted" style="margin-top:0">No accounts exist yet. Create the first manager account. This option disappears once it's done.</p>
     <form id="setupForm">
       <label for="sName">Your name</label><input id="sName" required>
+      <label for="sWh">First warehouse or storage location</label><input id="sWh" required value="Main Warehouse">
       <label for="sUser">Username</label><input id="sUser" required placeholder="e.g. jacinto">
       <label for="sPass">Password (at least 6 characters)</label><input id="sPass" type="password" minlength="6" required>
       <button class="btn">Create manager account</button>
@@ -360,7 +361,8 @@ window.WH_FIREBASE_CONFIG = {
   <div class="card mgr">
     <h2>Locations</h2>
     <form id="fLoc" class="toolbar"><input id="locName" required placeholder="New location, e.g. Service Van 1"><button class="btn small">Add location</button></form>
-    <div id="locList" class="chips"></div>
+    <div class="scroll"><table><thead><tr><th>Location</th><th>Type</th><th class="num">Items stocked here</th><th></th></tr></thead><tbody id="locBody"></tbody></table></div>
+    <p class="hint">A location can be removed once it holds no stock. Move stock out with Transfer first. The Faulty / Warranty area can be renamed but not removed.</p>
   </div>
   <div class="card mgr">
     <h2>Users</h2>
@@ -461,7 +463,7 @@ $('#setupForm').addEventListener('submit', async e => {
     b.set(db.doc('users/'+uid), {name, username:u, role:'manager', active:true, createdAt:FV().serverTimestamp()});
     b.set(db.doc('meta/bootstrap'), {by:uid, at:FV().serverTimestamp()});
     await b.commit();
-    await db.doc('locations/MAIN').set({name:'Main Warehouse', kind:'store'});
+    await db.doc('locations/MAIN').set({name: $('#sWh').value.trim() || 'Main Warehouse', kind:'store'});
     await db.doc('locations/FAULTY').set({name:'Faulty / Warranty', kind:'faulty'});
     location.reload();
   } catch(err){ settingUp = false; m.className='msg err'; m.textContent = err.message; }
@@ -1061,7 +1063,11 @@ function renderSetup(){
     || '<tr><td colspan="8" class="muted">No items yet.</td></tr>';
   $$('#itemBody [data-edit]').forEach(b => b.onclick = () => editItem(b.dataset.edit));
   if (!isMgr) return;
-  $('#locList').innerHTML = allLocs().map(l=>`<span class="chip" style="padding-right:10px">${esc(l.name)}</span>`).join('');
+  $('#locBody').innerHTML = allLocs().map(l => { const faulty = l.kind==='faulty';
+    return `<tr><td>${esc(l.name)}</td><td>${faulty?'Faulty / warranty area':'Storage'}</td><td class="num">${locLines(l.id).length}</td>
+      <td style="white-space:nowrap"><button class="btn ghost small" data-lren="${esc(l.id)}">Rename</button> ${faulty?'':`<button class="btn ghost small" data-ldel="${esc(l.id)}">Remove</button>`}</td></tr>`; }).join('');
+  $$('#locBody [data-lren]').forEach(b => b.onclick = () => renameLocation(b.dataset.lren));
+  $$('#locBody [data-ldel]').forEach(b => b.onclick = () => removeLocation(b.dataset.ldel));
   $('#userBody').innerHTML = Object.values(S.users).sort((a,b)=>a.name.localeCompare(b.name)).map(u => `<tr><td>${esc(u.name)}</td><td>${esc(u.username)}</td>
     <td>${u.role==='manager'?'Manager':'Keeper'}</td><td>${u.active?'<span class="pill p-green">Active</span>':'<span class="pill p-gray">Off</span>'}</td>
     <td>${u.id===me.uid?'<span class="muted">You</span>':`<button class="btn ghost small" data-tog="${u.id}">${u.active?'Turn off':'Turn on'}</button> <button class="btn ghost small" data-role="${u.id}">Make ${u.role==='manager'?'keeper':'manager'}</button>`}</td></tr>`).join('');
@@ -1098,10 +1104,36 @@ function editItem(code){
 }
 $('#fLoc').addEventListener('submit', async e => {
   e.preventDefault(); const n = $('#locName').value.trim(); if (!n) return;
+  if (locNameTaken(n)){ alertMsg('A location with that name already exists.'); return; }
   let id = n.toUpperCase().replace(/[^A-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,20) || 'LOC';
   while (S.locations[id]) id += '-2';
   try { await db.doc('locations/'+id).set({name:n, kind:'store'}); e.target.reset(); } catch(err){ alertMsg(friendly(err)); }
 });
+const locLines = id => Object.values(S.stock).filter(s => s.loc===id && Math.abs(s.qty||0) > 1e-9);
+const locNameTaken = (n, exceptId) => Object.values(S.locations).some(x => x.id!==exceptId && x.name.toLowerCase()===n.toLowerCase());
+function renameLocation(id){
+  const l = S.locations[id];
+  dialogForm(`Rename ${esc(l.name)}`, `<label for="dLocName">New name</label><input id="dLocName" required value="${esc(l.name)}">
+    <p class="hint">Past movements in History keep the name they were posted under.</p>`, 'Save', async () => {
+    const n = $('#dLocName').value.trim();
+    if (!n) throw new Error('Enter a name.');
+    if (locNameTaken(n, id)) throw new Error('Another location already has that name.');
+    await db.doc('locations/'+id).update({name:n});
+  });
+}
+function removeLocation(id){
+  const l = S.locations[id], lines = locLines(id);
+  const pend = S.pending.filter(m => m.loc===id || m.toLoc===id);
+  const inUnits = Object.values(S.serials).filter(x => x.loc===id && (x.status==='in_stock' || x.status==='faulty'));
+  let problem = '';
+  if (lines.length || inUnits.length) problem = `${l.name} still holds stock: ${[...new Set(lines.map(s=>s.itemCode))].slice(0,6).join(', ')}${lines.length>6?'…':''}. Move it to another location with Transfer, then remove ${l.name}.`;
+  else if (pend.length) problem = `${pend.length} adjustment(s) for ${l.name} are waiting for approval. Approve or reject them first.`;
+  else if (storeLocs().length <= 1) problem = `${l.name} is the only storage location. Add the replacement location first, then remove this one.`;
+  if (problem){ alertMsg(problem); return; }
+  dialogForm(`Remove ${esc(l.name)}?`, `<p class="muted">It will no longer appear in any location list. Its past movements stay in History.</p>`, 'Remove location', async () => {
+    await db.doc('locations/'+id).delete();
+  });
+}
 $('#fUser').addEventListener('submit', async e => {
   e.preventDefault(); const m = $('#userMsg'), u = $('#uUser').value.trim().toLowerCase();
   if (!validUsername(u)){ m.className='msg err'; m.textContent='Username: 3–30 lowercase letters, numbers, dot, dash or underscore.'; return; }
@@ -1137,7 +1169,7 @@ async function runImport(){
   const locMap = {};
   try {
     for (const l of importData.locs){
-      const existing = Object.values(S.locations).find(x => x.name.toLowerCase() === l.name.toLowerCase() || (l.name==='Main Warehouse' && x.id==='MAIN'));
+      const existing = Object.values(S.locations).find(x => x.name.toLowerCase() === l.name.toLowerCase()) || (l.name==='Main Warehouse' ? storeLocs()[0] : null);
       if (existing){ locMap[l.id] = existing.id; continue; }
       let id = l.name.toUpperCase().replace(/[^A-Z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,20) || 'LOC'; while (S.locations[id]) id += '-2';
       await db.doc('locations/'+id).set({name:l.name, kind:'store'}); S.locations[id] = {id, name:l.name, kind:'store'}; locMap[l.id] = id;
