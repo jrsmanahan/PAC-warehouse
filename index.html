@@ -11,14 +11,12 @@
      ============================================================ -->
 <script>
 window.WH_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCcJG96ysYI6fjHSRkfo49tl_vpdOYY-1Y",
-  authDomain: "pac-warehouse.firebaseapp.com",
-  projectId: "pac-warehouse",
-  storageBucket: "pac-warehouse.firebasestorage.app",
-  messagingSenderId: "938368532613",
-  appId: "1:938368532613:web:c49873994c88083398a9ec",
-  measurementId: "G-PVDCRXB29G"
-
+  apiKey: "PASTE_API_KEY",
+  authDomain: "PASTE_PROJECT_ID.firebaseapp.com",
+  projectId: "PASTE_PROJECT_ID",
+  storageBucket: "PASTE_PROJECT_ID.appspot.com",
+  messagingSenderId: "PASTE_SENDER_ID",
+  appId: "PASTE_APP_ID"
 };
 </script>
 
@@ -66,7 +64,7 @@ window.WH_FIREBASE_CONFIG = {
   .btn.small{margin:0;padding:6px 10px;font-size:13px}
   table.cards .c-meta, table.cards .sm-only{display:none}
   .offline{background:var(--red);color:#fff;padding:8px 16px;font-size:14px;text-align:center}
-  nav .more-btn{display:none}
+  .burger, .cur-tab, .menu-user, .scrim{display:none}
   .subnav{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
   .subnav button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:99px;padding:7px 14px;font:inherit;font-size:14px;cursor:pointer}
   .subnav button.active{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
@@ -74,25 +72,32 @@ window.WH_FIREBASE_CONFIG = {
   .saved{font-size:13px;color:var(--accent);min-width:48px}
   .danger-zone{margin-top:8px;text-align:right}
   .btn.link-danger{background:none;border:0;color:var(--red);font-weight:500;padding:6px 0;margin:0;font-size:13px;text-decoration:underline}
-  .more-list{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .more-list button{padding:14px 10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:10px;font:inherit;cursor:pointer;position:relative}
   @media (max-width:640px){
-    header{padding:10px 12px}
-    header h1{font-size:15px}
-    .who{font-size:12px;gap:6px}
+    header{position:sticky;top:0;z-index:30;height:52px;padding:0 4px 0 14px;flex-wrap:nowrap;gap:6px}
+    header h1{font-size:15px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cur-tab{display:inline;font-weight:500;color:var(--muted)}
+    .cur-tab:not(:empty)::before{content:" · "}
+    header .who{display:none}
+    .burger{display:flex;align-items:center;justify-content:center;flex:none;width:48px;height:48px;border:0;border-radius:10px;background:none;color:var(--ink);cursor:pointer;position:relative}
+    .burger:focus-visible{outline:2px solid var(--accent)}
+    .burger .ic-close{display:none}
+    body.menu-open .burger .ic-open{display:none}
+    body.menu-open .burger .ic-close{display:block}
+    .burger .dot{position:absolute;top:11px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--red);border:2px solid var(--card)}
+    nav{display:none;position:fixed;top:52px;left:0;right:0;z-index:31;flex-direction:column;gap:0;padding:6px 0 8px;
+        max-height:calc(100vh - 52px);overflow-y:auto;background:var(--card);border-bottom:1px solid var(--line);box-shadow:0 10px 24px rgba(0,0,0,.2)}
+    body.menu-open nav{display:flex}
+    nav button{text-align:left;padding:14px 20px;font-size:16px;border-radius:0;color:var(--ink);white-space:normal}
+    nav button.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+    nav .badge{margin-left:8px}
+    .menu-user{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:6px;padding:12px 20px 4px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+    body.menu-open .scrim{display:block;position:fixed;top:52px;left:0;right:0;bottom:0;z-index:29;background:rgba(0,0,0,.35)}
+    body.menu-open{overflow:hidden}
     main{padding:12px}
     .card{padding:14px}
-    nav{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:20;flex-wrap:nowrap;overflow:visible;gap:2px;
-        padding:6px 6px calc(6px + env(safe-area-inset-bottom, 0px));border-top:1px solid var(--line);border-bottom:0;box-shadow:0 -2px 10px rgba(0,0,0,.07)}
-    nav button{flex:1 1 0;min-width:0;padding:12px 1px;font-size:12px;letter-spacing:-.01em;text-align:center;white-space:nowrap}
-    nav .badge{position:absolute;top:1px;right:2px;margin:0}
     .kpis{gap:10px 18px}
     .kpis div b{font-size:18px}
     .kpis div span{font-size:11px}
-    nav button.sec{display:none}
-    nav .more-btn{display:block}
-    nav .badge{min-width:16px;line-height:16px;font-size:10px;padding:0 4px}
-    body{padding-bottom:calc(72px + env(safe-area-inset-bottom, 0px))}
     .btn.small{min-height:38px;padding:8px 12px}
     form .btn:not(.small), .card > .btn:not(.small), #fFaulty .btn{width:100%}
     table.cards thead{display:none}
@@ -215,9 +220,15 @@ window.WH_FIREBASE_CONFIG = {
 <div id="app">
 <div id="offline" class="offline" hidden>No internet connection. Nothing you post will save until the connection is back.</div>
 <header>
-  <h1>Prime Warehouse</h1>
+  <h1>Prime Warehouse<span class="cur-tab" id="curTab"></span></h1>
   <div class="who"><span id="whoName"></span><span id="whoRole" class="pill p-gray"></span><button class="btn ghost small" onclick="auth.signOut()">Sign out</button></div>
+  <button class="burger" id="burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="tabs">
+    <svg class="ic-open" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/></svg>
+    <svg class="ic-close" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/></svg>
+    <span class="dot" id="burgerDot" hidden></span>
+  </button>
 </header>
+<div class="scrim" id="scrim"></div>
 <nav id="tabs">
   <button data-tab="stock" class="active">Stock</button>
   <button data-tab="deliveries">Deliveries<span class="badge" id="delBadge" hidden></span></button>
@@ -231,7 +242,7 @@ window.WH_FIREBASE_CONFIG = {
   <button data-tab="labels" data-roles="manager keeper">Labels</button>
   <button data-tab="approvals" class="mgr">Approvals<span class="badge" id="pendBadge" hidden></span></button>
   <button data-tab="setup">Setup</button>
-  <button class="more-btn" id="moreBtn" type="button">More<span class="badge" id="moreBadge" hidden></span></button>
+  <div class="menu-user"><span id="menuWho"></span><button class="btn ghost small" type="button" onclick="auth.signOut()">Sign out</button></div>
 </nav>
 
 <main>
@@ -918,8 +929,7 @@ function renderAll(){
   const waiting = dels.filter(d => d.status==='requested').length, onRoad = dels.filter(d => d.status==='dispatched').length;
   const dn = me.role==='keeper' ? waiting : me.role==='dispatcher' ? onRoad : waiting + onRoad, db2 = $('#delBadge');
   db2.hidden = !dn; db2.textContent = dn;
-  const mb = $('#moreBadge'), secBadges = $$('nav button.sec .badge').filter(x => !x.hidden).reduce((a, x) => a + (+x.textContent || 0), 0);
-  mb.hidden = !secBadges; mb.textContent = secBadges;
+  $('#burgerDot').hidden = !$$('nav .badge').some(x => !x.hidden && x.closest('button:not([hidden])'));
   db2.title = me.role==='keeper' ? 'Deliveries waiting to be loaded' : me.role==='dispatcher' ? 'Trips on the road to close' : 'Waiting to load plus on the road';
 }
 
@@ -1862,12 +1872,16 @@ $('#fCrew').addEventListener('submit', async e => {
 });
 
 // ------------------------------------------------------------ phone navigation, setup sections, labels shortcut, scan sounds
-const PRIMARY = { keeper:['stock','deliveries','receive','issue'], manager:['stock','deliveries','receive','approvals'], dispatcher:['stock','deliveries','projects','history','setup'] };
-function roleTabs(){ return $$('nav button[data-tab]').filter(b => !b.hidden).map(b => b.dataset.tab); }
+function toggleMenu(open){
+  const o = open ?? !document.body.classList.contains('menu-open');
+  document.body.classList.toggle('menu-open', o);
+  const b = $('#burger'); b.setAttribute('aria-expanded', o); b.setAttribute('aria-label', o ? 'Close menu' : 'Open menu');
+}
+$('#burger').addEventListener('click', () => toggleMenu());
+$('#scrim').addEventListener('click', () => toggleMenu(false));
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('menu-open')) toggleMenu(false); });
 function setupNav(){
-  const tabs = roleTabs(), prim = tabs.length > 5 ? PRIMARY[me.role] || tabs.slice(0,4) : tabs;
-  $$('nav button[data-tab]').forEach(b => b.classList.toggle('sec', !prim.includes(b.dataset.tab)));
-  $('#moreBtn').hidden = tabs.length <= 5;
+  $('#menuWho').textContent = `${me.name} · ${roleName(me.role)}`;
   // setup sections this role can see
   const subs = [['items','Items'],['fleet','Fleet'],['locations','Locations'],['users','Users'],['import','Import']]
     .filter(([k]) => $$(`#setup [data-sub="${k}"]`).some(el => !el.hidden));
@@ -1879,11 +1893,6 @@ function showSub(k){
   $$('#setup [data-sub]').forEach(el => el.classList.toggle('subhide', el.dataset.sub !== k));
   $$('#setupSub [data-subtab]').forEach(b => b.classList.toggle('active', b.dataset.subtab === k));
 }
-$('#moreBtn').addEventListener('click', () => {
-  const secs = $$('nav button.sec[data-tab]').filter(b => !b.hidden);
-  dialogForm('More', `<div class="more-list">${secs.map(b => `<button type="button" data-go="${b.dataset.tab}">${b.innerHTML}</button>`).join('')}</div>`, 'Close', async () => {}, {info:true});
-  $$('#dlgForm [data-go]').forEach(b => b.onclick = () => { $('#dlg').close(); showTab(b.dataset.go); });
-});
 function labelFor(code){
   Object.keys(copies).forEach(k => copies[k] = 0); copies[code] = 1;
   showTab('labels'); renderLabels();
@@ -1924,7 +1933,8 @@ function alertMsg(t){ dialogForm('Note', `<p>${esc(t)}</p>`, 'OK', async()=>{}, 
 $('#tabs').addEventListener('click', e => { const b = e.target.closest('button[data-tab]'); if (b) showTab(b.dataset.tab); });
 function showTab(t){
   $$('nav button[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
-  $('#moreBtn').classList.toggle('active', !!$(`nav button.sec[data-tab="${t}"]`));
+  toggleMenu(false);
+  const cur = $(`nav button[data-tab="${t}"]`); $('#curTab').textContent = cur ? cur.firstChild.textContent.trim() : '';
   $$('section.tab').forEach(s => s.classList.toggle('active', s.id === t));
   if (t==='history') loadHistory();
   if (t==='projects' && !openProjectId) closeProject();
